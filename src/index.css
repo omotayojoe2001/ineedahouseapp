@@ -78,32 +78,32 @@ body {
   line-height: 1.5;
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  /* Scale everything down by 50% */
-  zoom: 0.5;
+  /* Scale everything down by 75% */
+  zoom: 0.75;
 }
 
 /* Responsive zoom adjustments */
 @media (min-width: 640px) {
   body {
-    zoom: 0.55;
+    zoom: 0.8;
   }
 }
 
 @media (min-width: 768px) {
   body {
-    zoom: 0.6;
+    zoom: 0.85;
   }
 }
 
 @media (min-width: 1024px) {
   body {
-    zoom: 0.65;
+    zoom: 0.9;
   }
 }
 
 @media (min-width: 1280px) {
   body {
-    zoom: 0.7;
+    zoom: 0.95;
   }
 }
 
