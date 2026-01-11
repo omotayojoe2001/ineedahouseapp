@@ -90,6 +90,15 @@ const PropertySection: React.FC<PropertySectionProps> = ({
                 {property.location && (
                   <p className="text-xs text-muted-foreground">{property.location}</p>
                 )}
+                {/* Category Badge */}
+                <div className="mb-1">
+                  <span className="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                    {property.duration.includes('month') || property.duration.includes('day') || property.duration.includes('week') || property.duration.includes('year') ? 'For Rent' : 
+                     property.duration.includes('total') || property.duration.includes('sale') ? 'For Sale' : 
+                     property.duration.includes('service') ? 'Service' :
+                     'Available'}
+                  </span>
+                </div>
                 <div className="flex items-center space-x-1">
                   <Star size={10} className="md:w-3 md:h-3 text-foreground fill-foreground" />
                   <span className="text-xs md:text-sm text-foreground">{property.rating}</span>

@@ -35,6 +35,8 @@ import CreateShopListingPage from "./pages/CreateShopListingPage";
 import AdminLocationPage from "./pages/AdminLocationPage";
 import DiagnosticPage from "./pages/DiagnosticPage";
 import MapSearchPage from "./pages/MapSearchPage";
+import LocationVisibilityPage from "./pages/LocationVisibilityPage";
+import SearchResultsPage from "./pages/SearchResultsPage";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -94,6 +96,8 @@ const App = () => (
             <Route path="/admin-locations" element={<AdminLocationPage />} />
             <Route path="/diagnostic" element={<DiagnosticPage />} />
             <Route path="/map-search" element={<MapSearchPage />} />
+            <Route path="/location-visibility" element={<LocationVisibilityPage />} />
+            <Route path="/search-results" element={<SearchResultsPage />} />
             <Route path="/property/:id" element={<PropertyDetails />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

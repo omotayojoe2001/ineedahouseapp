@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import SearchHeader from '../components/SearchHeader';
+import PropertySearchHeader from '../components/PropertySearchHeader';
 import PropertySection from '../components/PropertySection';
 import FeaturedCarousel from '../components/FeaturedCarousel';
 import { useToast } from '@/hooks/use-toast';
@@ -173,6 +173,10 @@ const Explore: React.FC = () => {
       location: service.location,
     }));
 
+  const recentListings = loading ? [] : properties
+    .slice(0, 4)
+    .map(transformProperty);
+
   const featuredProperties = loading ? [] : properties
     .filter(prop => prop.featured)
     .slice(0, 2)
@@ -286,7 +290,7 @@ const Explore: React.FC = () => {
         SEARCH: "{searchQuery}" - {searchQuery ? 'Filtering properties' : 'Showing all properties'}
       </div>
       <div className="lg:pt-20">
-        <SearchHeader showFilters={true} onSearch={handleSearch} />
+        <PropertySearchHeader />
         
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -300,6 +304,13 @@ const Explore: React.FC = () => {
             <FeaturedCarousel 
               properties={featuredProperties}
               onPropertyClick={handlePropertyClick}
+            />
+            
+            <PropertySection
+              title="Recent Listings"
+              properties={propertiesWithFavorites(recentListings)}
+              onPropertyClick={handlePropertyClick}
+              onFavoriteToggle={handleFavoriteToggle}
             />
             
             <PropertySection

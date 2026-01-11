@@ -68,15 +68,15 @@ const LocationInputWithMap: React.FC<LocationInputWithMapProps> = ({
         : { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 };
 
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const { latitude, longitude } = position.coords;
           const accuracy = position.coords.accuracy;
           
           setCoordinates({ lat: latitude, lng: longitude });
           setMapKey(prev => prev + 1); // Refresh map
           
-          const addressString = `GPS Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-          onChange(addressString);
+          // Show raw coordinates
+          onChange(`${latitude}, ${longitude}`);
           
           if (onLocationChange) {
             onLocationChange({
@@ -99,6 +99,33 @@ const LocationInputWithMap: React.FC<LocationInputWithMapProps> = ({
         options
       );
     }
+  };
+
+  const generateFallbackAddress = (lat: number, lng: number) => {
+    // Simple fallback based on known Lagos/Nigeria coordinates
+    const lagosAreas = [
+      { name: 'Lekki Phase 1', lat: 6.4474, lng: 3.4653, radius: 0.05 },
+      { name: 'Victoria Island', lat: 6.4281, lng: 3.4219, radius: 0.03 },
+      { name: 'Ikeja', lat: 6.5954, lng: 3.3364, radius: 0.05 },
+      { name: 'Yaba', lat: 6.5158, lng: 3.3696, radius: 0.03 },
+      { name: 'Surulere', lat: 6.4969, lng: 3.3534, radius: 0.04 },
+      { name: 'Ikoyi', lat: 6.4541, lng: 3.4316, radius: 0.02 },
+      { name: 'Ajah', lat: 6.4698, lng: 3.5852, radius: 0.06 }
+    ];
+
+    // Find closest area
+    let closestArea = 'Lagos';
+    let minDistance = Infinity;
+    
+    for (const area of lagosAreas) {
+      const distance = Math.sqrt(Math.pow(lat - area.lat, 2) + Math.pow(lng - area.lng, 2));
+      if (distance < area.radius && distance < minDistance) {
+        minDistance = distance;
+        closestArea = area.name;
+      }
+    }
+    
+    return `Near ${closestArea}, Lagos, Nigeria`;
   };
 
   const MapPreview = () => {

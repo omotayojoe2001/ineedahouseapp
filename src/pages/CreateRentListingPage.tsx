@@ -85,6 +85,26 @@ const CreateRentListingPage = () => {
     availableFrom: '',
     allowsPets: '',
     furnished: '',
+    // Combined fees
+    agreementCommission: '',
+    legalAgency: '',
+    // Amenities (checkboxes)
+    amenities: {
+      gym: false,
+      kitchen: false,
+      ac: false,
+      generator: false,
+      furniture: false,
+      elevator: false,
+      balcony: false,
+      parking: false,
+      water: false,
+      internet: false,
+      security: false,
+      garden: false,
+      pool: false,
+      cctv: false
+    },
   });
 
   const propertyTypes = [
@@ -130,79 +150,80 @@ const CreateRentListingPage = () => {
 
   const handleSubmit = async () => {
     try {
-      // Map form data to PropertyData interface
+      // Map form data to PropertyData interface - CLEAN VERSION
       const propertyData = {
         title: formData.title,
         description: formData.description,
         category: 'rent' as const,
         property_type: formData.propertySubType,
         price: parseFloat(formData.rentAmount) || 0,
+        location: formData.locationData.detailedAddress || 'Location not specified',
         
-        // Location data from EnhancedLocationInput
-        state_id: formData.locationData.stateId,
-        city_id: formData.locationData.cityId,
-        area_id: formData.locationData.areaId,
+        // Location data
+        state_id: formData.locationData.stateId || null,
+        city_id: formData.locationData.cityId || null,
+        area_id: formData.locationData.areaId || null,
         street_id: formData.locationData.streetId || null,
         address: formData.locationData.detailedAddress,
         nearby_landmarks: formData.locationData.landmarks,
+        
+        // Basic property info
         bedrooms: parseInt(formData.bedrooms) || 0,
         bathrooms: parseInt(formData.bathrooms) || 0,
-        guest_toilet: formData.guestToilet,
+        guest_toilet: formData.guestToilet === 'yes' ? 1 : 0,
         
         // Pricing
         rent_type: formData.rentType as 'daily' | 'weekly' | 'monthly' | 'annual',
         annual_rent: parseFloat(formData.rentAmount) || 0,
         security_deposit: parseFloat(formData.securityDeposit) || 0,
         service_charge: parseFloat(formData.serviceCharge) || 0,
-        agreement_fee: parseFloat(formData.agreementFee) || 0,
-        commission_fee: parseFloat(formData.commissionFee) || 0,
-        legal_fee: parseFloat(formData.legalFee) || 0,
-        caution_fee: parseFloat(formData.cautionFee) || 0,
-        agency_fee: parseFloat(formData.agencyFee) || 0,
-        inspection_fee: parseFloat(formData.inspectionFee) || 0,
+        agreement_fee: parseFloat(formData.agreementCommission) || 0,
+        legal_fee: parseFloat(formData.legalAgency) || 0,
         other_fees: formData.otherFees || [],
         
         // Building details
-        floor_level: formData.floorLevel,
+        floor_level: formData.floorLevel === 'ground' ? 0 : 
+                    formData.floorLevel === '1st' ? 1 :
+                    formData.floorLevel === '2nd' ? 2 :
+                    formData.floorLevel === '3rd' ? 3 : 4,
         total_units_in_building: parseInt(formData.totalUnitsInBuilding) || 0,
-        
-        // Interior features
-        living_room: formData.livingRoom,
-        dining_area: formData.diningArea,
-        kitchen_cabinets: formData.kitchenCabinets,
-        countertop: formData.countertop,
-        heat_extractor: formData.heatExtractor,
-        balcony: formData.balcony,
-        storage: formData.storage,
-        
-        // Utilities
-        electricity_type: formData.electricityType,
-        transformer: formData.transformer,
-        generator: formData.generator,
-        water_supply: formData.waterSupply,
-        internet_ready: formData.internetReady,
-        
-        // Security
-        gated_compound: formData.gatedCompound,
-        security_24_7: formData.security24_7,
-        cctv: formData.cctv,
-        parking_spaces: formData.parkingSpaces,
-        
-        // Finishing
-        pop_ceiling: formData.popCeiling,
-        tiled_floors: formData.tiledFloors,
         building_condition: formData.buildingCondition,
-        certificate_of_occupancy: formData.certificateOfOccupancy,
-        deed_of_assignment: formData.deedOfAssignment,
-        building_plan: formData.buildingPlan,
+        
+        // Amenities (boolean)
+        gym: formData.amenities.gym,
+        air_conditioning: formData.amenities.ac,
+        parking: formData.amenities.parking,
+        swimming_pool: formData.amenities.pool,
+        garden: formData.amenities.garden,
+        elevator: formData.amenities.elevator,
+        furnished: formData.amenities.furniture,
+        
+        // Security (boolean)
+        gated_compound: formData.gatedCompound === 'yes',
+        security_personnel: formData.security24_7 === 'yes',
+        cctv_surveillance: formData.cctv !== 'none' && formData.cctv !== '',
+        parking_spaces: parseInt(formData.parkingSpaces) || 0,
+        
+        // Finishing (boolean)
+        pop_ceiling: formData.popCeiling === 'yes',
+        tiled_floors: formData.tiledFloors === 'yes',
+        
+        // Legal documents (boolean)
+        certificate_of_occupancy: formData.certificateOfOccupancy === 'available',
+        deed_of_assignment: formData.deedOfAssignment === 'available',
+        approved_building_plan: formData.buildingPlan === 'approved',
         
         // Lease terms
         available_from: formData.availableFrom,
         lease_terms: formData.leaseDuration,
         
+        // Images
+        images: images.map(img => URL.createObjectURL(img)),
+        
         status: 'active' as const
       };
 
+      console.log('Property data being sent:', propertyData);
       await PropertyService.createProperty(propertyData);
       alert('Rent listing created successfully!');
       navigate('/my-listings');
@@ -705,49 +726,79 @@ const CreateRentListingPage = () => {
                 </div>
               </div>
 
-              {/* Finishing & Legal */}
+              {/* Amenities */}
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold mb-3">What This Place Offers</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { key: 'gym', label: 'Gym' },
+                    { key: 'kitchen', label: 'Kitchen' },
+                    { key: 'ac', label: 'Air Conditioning' },
+                    { key: 'generator', label: 'Generator' },
+                    { key: 'furniture', label: 'Furnished' },
+                    { key: 'elevator', label: 'Elevator' },
+                    { key: 'balcony', label: 'Balcony' },
+                    { key: 'parking', label: 'Parking' },
+                    { key: 'water', label: 'Water Supply' },
+                    { key: 'internet', label: 'Internet' },
+                    { key: 'security', label: '24/7 Security' },
+                    { key: 'garden', label: 'Garden' },
+                    { key: 'pool', label: 'Swimming Pool' },
+                    { key: 'cctv', label: 'CCTV' }
+                  ].map(amenity => (
+                    <label key={amenity.key} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.amenities[amenity.key]}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          amenities: { ...prev.amenities, [amenity.key]: e.target.checked }
+                        }))}
+                        className="rounded border-border"
+                      />
+                      <span className="text-sm">{amenity.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Finishing & Legal - Simplified with checkboxes */}
               <div className="bg-white p-4 rounded-lg border">
                 <h3 className="font-semibold mb-3">House Finishing & Papers</h3>
                 <div className="space-y-3">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">POP ceiling (smooth ceiling)</label>
-                      <select
-                        value={formData.popCeiling}
-                        onChange={(e) => handleInputChange('popCeiling', e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-lg"
-                      >
-                        <option value="">Choose</option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Floor tiles</label>
-                      <select
-                        value={formData.tiledFloors}
-                        onChange={(e) => handleInputChange('tiledFloors', e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-lg"
-                      >
-                        <option value="">Choose</option>
-                        <option value="yes">Yes, tiled floors</option>
-                        <option value="no">No tiles (cement floor)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">How is the building?</label>
-                      <select
-                        value={formData.buildingCondition}
-                        onChange={(e) => handleInputChange('buildingCondition', e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-lg"
-                      >
-                        <option value="">Choose</option>
-                        <option value="newly-built">Brand new building</option>
-                        <option value="renovated">Just renovated</option>
-                        <option value="good">Good condition</option>
-                        <option value="fair">Okay condition</option>
-                      </select>
-                    </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.popCeiling === 'yes'}
+                        onChange={(e) => handleInputChange('popCeiling', e.target.checked ? 'yes' : 'no')}
+                        className="rounded border-border"
+                      />
+                      <span className="text-sm">POP ceiling (smooth ceiling)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.tiledFloors === 'yes'}
+                        onChange={(e) => handleInputChange('tiledFloors', e.target.checked ? 'yes' : 'no')}
+                        className="rounded border-border"
+                      />
+                      <span className="text-sm">Tiled floors</span>
+                    </label>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">How is the building?</label>
+                    <select
+                      value={formData.buildingCondition}
+                      onChange={(e) => handleInputChange('buildingCondition', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                    >
+                      <option value="">Choose</option>
+                      <option value="newly-built">Brand new building</option>
+                      <option value="renovated">Just renovated</option>
+                      <option value="good">Good condition</option>
+                      <option value="fair">Okay condition</option>
+                    </select>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
@@ -844,7 +895,10 @@ const CreateRentListingPage = () => {
                 <h3 className="font-semibold mb-3">Additional Fees</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Security Deposit (₦)</label>
+                    <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                      Security Deposit (₦)
+                      <span className="text-xs text-gray-500 cursor-help" title="Refundable deposit to cover damages">❓</span>
+                    </label>
                     <input
                       type="number"
                       value={formData.securityDeposit}
@@ -854,7 +908,10 @@ const CreateRentListingPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Service Charge (₦)</label>
+                    <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                      Service Charge (₦)
+                      <span className="text-xs text-gray-500 cursor-help" title="Monthly maintenance and utility fees">❓</span>
+                    </label>
                     <input
                       type="number"
                       value={formData.serviceCharge}
@@ -864,43 +921,29 @@ const CreateRentListingPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Agreement Fee (₦)</label>
+                    <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                      Agreement & Commission (₦)
+                      <span className="text-xs text-gray-500 cursor-help" title="Combined agreement preparation and agent commission fees">❓</span>
+                    </label>
                     <input
                       type="number"
-                      value={formData.agreementFee}
-                      onChange={(e) => handleInputChange('agreementFee', e.target.value)}
+                      value={formData.agreementCommission}
+                      onChange={(e) => handleInputChange('agreementCommission', e.target.value)}
                       className="w-full px-3 py-2 border border-border rounded-lg"
-                      placeholder="50000"
+                      placeholder="125000"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Commission Fee (₦)</label>
+                    <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                      Legal & Agency (₦)
+                      <span className="text-xs text-gray-500 cursor-help" title="Combined legal documentation and agency processing fees">❓</span>
+                    </label>
                     <input
                       type="number"
-                      value={formData.commissionFee}
-                      onChange={(e) => handleInputChange('commissionFee', e.target.value)}
+                      value={formData.legalAgency}
+                      onChange={(e) => handleInputChange('legalAgency', e.target.value)}
                       className="w-full px-3 py-2 border border-border rounded-lg"
-                      placeholder="75000"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Legal Fee (₦)</label>
-                    <input
-                      type="number"
-                      value={formData.legalFee}
-                      onChange={(e) => handleInputChange('legalFee', e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-lg"
-                      placeholder="30000"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Agency Fee (₦)</label>
-                    <input
-                      type="number"
-                      value={formData.agencyFee}
-                      onChange={(e) => handleInputChange('agencyFee', e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-lg"
-                      placeholder="100000"
+                      placeholder="130000"
                     />
                   </div>
                 </div>
@@ -976,16 +1019,16 @@ const CreateRentListingPage = () => {
                       <span>₦{parseFloat(formData.serviceCharge || '0').toLocaleString()}</span>
                     </div>
                   )}
-                  {formData.agreementFee && (
+                  {formData.agreementCommission && (
                     <div className="flex justify-between">
-                      <span>Agreement Fee:</span>
-                      <span>₦{parseFloat(formData.agreementFee || '0').toLocaleString()}</span>
+                      <span>Agreement & Commission:</span>
+                      <span>₦{parseFloat(formData.agreementCommission || '0').toLocaleString()}</span>
                     </div>
                   )}
-                  {formData.commissionFee && (
+                  {formData.legalAgency && (
                     <div className="flex justify-between">
-                      <span>Commission Fee:</span>
-                      <span>₦{parseFloat(formData.commissionFee || '0').toLocaleString()}</span>
+                      <span>Legal & Agency:</span>
+                      <span>₦{parseFloat(formData.legalAgency || '0').toLocaleString()}</span>
                     </div>
                   )}
                   {(formData.otherFees || []).map((fee, index) => 
@@ -1004,10 +1047,8 @@ const CreateRentListingPage = () => {
                           (parseFloat(formData.rentAmount) || 0) +
                           (parseFloat(formData.securityDeposit) || 0) +
                           (parseFloat(formData.serviceCharge) || 0) +
-                          (parseFloat(formData.agreementFee) || 0) +
-                          (parseFloat(formData.commissionFee) || 0) +
-                          (parseFloat(formData.legalFee) || 0) +
-                          (parseFloat(formData.agencyFee) || 0) +
+                          (parseFloat(formData.agreementCommission) || 0) +
+                          (parseFloat(formData.legalAgency) || 0) +
                           (formData.otherFees || []).reduce((sum, fee) => sum + (parseFloat(fee.amount) || 0), 0)
                         ).toLocaleString()}
                       </span>
@@ -1021,7 +1062,10 @@ const CreateRentListingPage = () => {
                 <h3 className="font-semibold mb-3">Lease Terms</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Lease Duration</label>
+                    <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                      Lease Duration
+                      <span className="text-xs text-gray-500 cursor-help" title="How long the tenant will rent the property">❓</span>
+                    </label>
                     <select
                       value={formData.leaseDuration}
                       onChange={(e) => handleInputChange('leaseDuration', e.target.value)}

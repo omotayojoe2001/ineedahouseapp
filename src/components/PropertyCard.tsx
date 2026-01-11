@@ -157,6 +157,15 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             <MapPin size={14} />
             {location}
           </div>
+          {/* Category Badge */}
+          <div className="mt-2">
+            <span className="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+              {duration === 'month' || duration === 'day' || duration === 'week' || duration === 'year' ? 'For Rent' : 
+               duration === 'sale' || duration === 'total' ? 'For Sale' : 
+               duration === 'service' ? 'Service' :
+               'Available'}
+            </span>
+          </div>
         </div>
         
         {/* Property Details */}
