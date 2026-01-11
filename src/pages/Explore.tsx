@@ -6,6 +6,7 @@ import PropertySection from '../components/PropertySection';
 import FeaturedCarousel from '../components/FeaturedCarousel';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { PropertyService } from '../services/propertyService';
 
 // Import property images
 import property1 from '../assets/property-1.jpg';
