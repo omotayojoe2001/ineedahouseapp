@@ -266,4 +266,27 @@ export class PropertyService {
       throw error;
     }
   }
+
+  static async getFavorites() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data, error } = await supabase
+        .from('property_favorites')
+        .select(`
+          properties!inner(
+            *,
+            property_images(*)
+          )
+        `)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      return data?.map(item => item.properties) || [];
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+      throw error;
+    }
+  }
 }

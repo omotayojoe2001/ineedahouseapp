@@ -217,8 +217,14 @@ const CreateRentListingPage = () => {
         available_from: formData.availableFrom,
         lease_terms: formData.leaseDuration,
         
-        // Images - temporarily disabled until proper storage is set up
-        images: [],
+        // Convert images to base64 for storage
+        images: await Promise.all(images.map(async (img) => {
+          return new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(img);
+          });
+        })),
         
         status: 'active' as const
       };
@@ -428,14 +434,43 @@ const CreateRentListingPage = () => {
             </div>
 
             <div className="space-y-6">
-              {/* Photo Upload - Temporarily Disabled */}
+              {/* Photo Upload */}
               <div>
                 <label className="block text-sm font-medium mb-2">Property Photos</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
-                  <Upload size={32} className="mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm text-gray-500">Photo upload temporarily disabled</p>
-                  <p className="text-xs text-gray-400 mt-1">Will be available in next update</p>
+                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label htmlFor="image-upload" className="cursor-pointer">
+                    <Upload size={32} className="mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Upload photos (Max 10)</p>
+                  </label>
                 </div>
+                
+                {images.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mt-4">
+                    {images.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={URL.createObjectURL(image)}
+                          alt={`Upload ${index + 1}`}
+                          className="w-full h-20 object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => removeImage(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Building Details */}

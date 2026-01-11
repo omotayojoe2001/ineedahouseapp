@@ -1,47 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { Heart, Filter, Grid, List, X } from 'lucide-react';
 import PropertyCard from '../components/PropertyCard';
+import { PropertyService } from '../services/propertyService';
 
 const Saved = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [priceFilter, setPriceFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
-  const [savedProperties] = useState([
-    {
-      id: '1',
-      title: 'Modern 3BR Apartment',
-      location: 'Lekki, Lagos',
-      price: 2500000,
-      duration: 'year' as const,
-      bedrooms: 3,
-      bathrooms: 2,
-      sqft: 1200,
-      rating: 4.8,
-      imageUrl: '/placeholder.svg',
-      verified: true,
-    },
-    {
-      id: '2',
-      title: 'Luxury Villa',
-      location: 'Banana Island, Lagos',
-      price: 8500000,
-      duration: 'year' as const,
-      bedrooms: 5,
-      bathrooms: 4,
-      sqft: 3500,
-      rating: 4.9,
-      imageUrl: '/placeholder.svg',
-      isFeatured: true,
-    },
-  ]);
+  const [savedProperties, setSavedProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadSavedProperties();
+  }, []);
+
+  const loadSavedProperties = async () => {
+    try {
+      setLoading(true);
+      const favorites = await PropertyService.getFavorites();
+      setSavedProperties(favorites);
+    } catch (error) {
+      console.error('Error loading saved properties:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredProperties = savedProperties.filter(property => {
-    const matchesLocation = !locationFilter || property.location.toLowerCase().includes(locationFilter.toLowerCase());
+    const matchesLocation = !locationFilter || property.location?.toLowerCase().includes(locationFilter.toLowerCase());
     const matchesPrice = !priceFilter || property.price <= parseInt(priceFilter);
     return matchesLocation && matchesPrice;
   });
+
+  if (loading) {
+    return (
+      <Layout activeTab="search">
+        <div className="bg-background min-h-screen desktop-nav-spacing flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading saved properties...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout activeTab="search">
