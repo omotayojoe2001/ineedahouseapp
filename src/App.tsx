@@ -21,6 +21,10 @@ import MessageConversation from "./pages/MessageConversation";
 import PropertyInspection from "./pages/PropertyInspection";
 import InspectorProfile from "./pages/InspectorProfile";
 import InspectorReviews from "./pages/InspectorReviews";
+import InspectorDashboard from "./pages/InspectorDashboard";
+import InspectorRegistration from "./pages/InspectorRegistration";
+import InspectionRequestDetails from "./pages/InspectionRequestDetails";
+import CategoryListing from "./pages/CategoryListing";
 import CreateListingPage from "./pages/CreateListingPage";
 import CreateServicePage from "./pages/CreateServicePage";
 import CreateRentListingPage from "./pages/CreateRentListingPage";
@@ -28,6 +32,7 @@ import CreateSaleListingPage from "./pages/CreateSaleListingPage";
 import CreateShortletListingPage from "./pages/CreateShortletListingPage";
 import CreateEventCenterListingPage from "./pages/CreateEventCenterListingPage";
 import CreateShopListingPage from "./pages/CreateShopListingPage";
+import AdminLocationPage from "./pages/AdminLocationPage";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -73,6 +78,10 @@ const App = () => (
             <Route path="/property-inspection/:id" element={<PropertyInspection />} />
             <Route path="/inspector/:id" element={<InspectorProfile />} />
             <Route path="/inspector/:id/reviews" element={<InspectorReviews />} />
+            <Route path="/inspector-dashboard" element={<InspectorDashboard />} />
+            <Route path="/inspector-registration" element={<InspectorRegistration />} />
+            <Route path="/inspection-request/:id" element={<InspectionRequestDetails />} />
+            <Route path="/category/:category" element={<CategoryListing />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/personal-info" element={<PersonalInfo />} />
             <Route path="/my-listings" element={<MyListings />} />
@@ -80,6 +89,7 @@ const App = () => (
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/privacy-security" element={<PrivacySecurity />} />
             <Route path="/help-support" element={<HelpSupport />} />
+            <Route path="/admin-locations" element={<AdminLocationPage />} />
             <Route path="/property/:id" element={<PropertyDetails />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

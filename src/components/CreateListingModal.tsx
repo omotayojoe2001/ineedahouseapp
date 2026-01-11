@@ -155,8 +155,8 @@ const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, onClose
         </div>
         
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-6">
             {categories.map((category) => {
               const Icon = category.icon;
               return (
@@ -166,24 +166,24 @@ const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, onClose
                   className="group relative overflow-hidden rounded-xl border border-border bg-card hover:bg-primary/5 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:scale-105"
                 >
                   {/* Background Image */}
-                  <div className="relative h-32 overflow-hidden">
+                  <div className="relative h-24 md:h-32 overflow-hidden">
                     <img 
                       src={category.image} 
                       alt={category.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full p-2">
-                      <Icon size={20} className="text-primary" />
+                    <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-white/90 backdrop-blur-sm rounded-full p-1.5 md:p-2">
+                      <Icon size={16} className="text-primary md:w-5 md:h-5" />
                     </div>
                   </div>
                   
                   {/* Content */}
-                  <div className="p-4">
-                    <h3 className="font-semibold text-foreground text-base mb-2 group-hover:text-primary transition-colors">
+                  <div className="p-2 md:p-4">
+                    <h3 className="font-semibold text-foreground text-xs md:text-base mb-1 md:mb-2 group-hover:text-primary transition-colors leading-tight">
                       {category.title}
                     </h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 leading-tight">
                       {category.description}
                     </p>
                   </div>

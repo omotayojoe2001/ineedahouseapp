@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Share, Heart, MapPin, Star, Phone, MessageCircle, Calendar, Shield, CheckCircle, Car, Waves, Dumbbell, ChefHat, Wifi, Snowflake, Droplets } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,18 +6,87 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { PropertyService } from '@/services/propertyService';
+import { useToast } from '@/hooks/use-toast';
 
 const PropertyDetails = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { toast } = useToast();
   const [isSaved, setIsSaved] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(1);
+  const [property, setProperty] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [showAllAmenities, setShowAllAmenities] = useState(false);
 
-  const propertyImages = [
+  useEffect(() => {
+    const fetchProperty = async () => {
+      if (!id) return;
+      
+      try {
+        const data = await PropertyService.getProperty(id);
+        setProperty(data);
+      } catch (error) {
+        console.error('Error fetching property:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load property details",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProperty();
+  }, [id, toast]);
+
+  const handleToggleFavorite = async () => {
+    if (!id) return;
+    
+    try {
+      const newState = await PropertyService.toggleFavorite(id);
+      setIsSaved(newState);
+      toast({
+        title: newState ? "Property Saved!" : "Property Removed",
+        description: newState ? "Added to your saved properties" : "Removed from your saved properties",
+      });
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast({
+        title: "Error",
+        description: "Please sign in to save properties",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading property details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!property) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Property Not Found</h1>
+          <p className="text-muted-foreground mb-4">The property you're looking for doesn't exist.</p>
+          <Button onClick={() => navigate('/')}>Go Home</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const propertyImages = property.property_images?.map((img: any) => img.image_url) || [
     '/src/assets/property-1.jpg',
     '/src/assets/property-2.jpg',
-    '/src/assets/property-3.jpg',
-    '/src/assets/property-4.jpg',
   ];
 
   const amenities = [
@@ -29,6 +98,14 @@ const PropertyDetails = () => {
     { icon: Wifi, label: 'WiFi' },
     { icon: Snowflake, label: 'AC' },
     { icon: Droplets, label: 'Water' },
+    { icon: Shield, label: 'Generator' },
+    { icon: Car, label: 'Elevator' },
+    { icon: Waves, label: 'Garden' },
+    { icon: Dumbbell, label: 'Balcony' },
+    { icon: ChefHat, label: 'Furnished' },
+    { icon: Wifi, label: 'Internet' },
+    { icon: Snowflake, label: 'Heating' },
+    { icon: Droplets, label: 'Pet Friendly' },
   ];
 
   const reviews = [
@@ -94,7 +171,7 @@ const PropertyDetails = () => {
               variant="secondary"
               size="icon"
               className="bg-white/90 hover:bg-white"
-              onClick={() => setIsSaved(!isSaved)}
+              onClick={handleToggleFavorite}
             >
               <Heart className={`h-4 w-4 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
             </Button>
@@ -110,10 +187,10 @@ const PropertyDetails = () => {
       {/* Property Overview */}
       <div className="p-4 space-y-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Modern 3-Bedroom Apartment</h1>
+          <h1 className="text-2xl font-bold text-foreground">{property.title}</h1>
           <div className="flex items-center gap-1 text-muted-foreground mt-1">
             <MapPin className="h-4 w-4" />
-            <span>Lekki Phase 1, Lagos, Nigeria</span>
+            <span>{property.location}</span>
           </div>
         </div>
 
@@ -121,11 +198,18 @@ const PropertyDetails = () => {
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <span className="text-muted-foreground">Property Type</span>
-            <p className="font-medium">Apartment</p>
+            <p className="font-medium">{property.property_type || property.category}</p>
           </div>
           <div>
             <span className="text-muted-foreground">Size</span>
-            <p className="font-medium">3 bed, 2 bath</p>
+            <p className="font-medium">
+              {property.bedrooms && property.bathrooms 
+                ? `${property.bedrooms} bed, ${property.bathrooms} bath`
+                : property.area_sqm 
+                ? `${property.area_sqm} sqm`
+                : 'Contact for details'
+              }
+            </p>
           </div>
         </div>
 
@@ -185,19 +269,22 @@ const PropertyDetails = () => {
       <div className="p-4 border-t border-border">
         <h2 className="text-lg font-semibold mb-3">What this place offers</h2>
         <div className="grid grid-cols-2 gap-3">
-          {amenities.map((amenity, index) => {
-            const IconComponent = amenity.icon;
-            return (
-              <div key={index} className="flex items-center gap-3">
-                <IconComponent size={20} className="text-muted-foreground" />
-                <span className="text-sm">{amenity.label}</span>
-              </div>
-            );
-          })}
+          {amenities.slice(0, showAllAmenities ? amenities.length : 8).map((amenity, index) => (
+            <div key={index} className="flex items-center gap-3">
+              <amenity.icon className="h-5 w-5 text-muted-foreground" />
+              <span className="text-sm">{amenity.label}</span>
+            </div>
+          ))}
         </div>
-        <Button variant="outline" className="w-full mt-4">
-          Show all amenities
-        </Button>
+        {amenities.length > 8 && (
+          <Button 
+            variant="outline" 
+            className="w-full mt-4"
+            onClick={() => setShowAllAmenities(!showAllAmenities)}
+          >
+            {showAllAmenities ? 'Show less amenities' : `Show all ${amenities.length} amenities`}
+          </Button>
+        )}
       </div>
 
       {/* Inspection Option - Unique Feature */}
@@ -305,8 +392,8 @@ const PropertyDetails = () => {
       <div className="sticky bottom-0 bg-white border-t border-border p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-lg font-semibold">₦150,000</p>
-            <p className="text-sm text-muted-foreground">per month</p>
+            <p className="text-lg font-semibold">₦{property.price?.toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground">{property.duration || 'per month'}</p>
           </div>
           <Button size="lg" className="bg-primary hover:bg-primary-hover">
             Contact Owner

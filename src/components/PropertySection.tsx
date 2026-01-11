@@ -10,6 +10,7 @@ interface Property {
   imageUrl: string;
   badge?: string;
   isFavorite?: boolean;
+  location?: string;
 }
 
 interface PropertySectionProps {
@@ -29,10 +30,19 @@ const PropertySection: React.FC<PropertySectionProps> = ({
     <div className="mb-8">
       {/* Section Header */}
       <div className="px-3 md:px-4 mb-3 md:mb-4">
-        <button className="flex items-center text-foreground hover:text-primary transition-colors">
-          <h2 className="text-base md:text-lg font-semibold mr-1">{title}</h2>
-          <ChevronRight size={18} className="md:w-5 md:h-5" />
-        </button>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base md:text-lg font-semibold text-foreground">{title}</h2>
+          <button 
+            className="flex items-center text-primary hover:text-primary/80 transition-colors text-sm font-medium"
+            onClick={() => {
+              const sectionSlug = title.toLowerCase().replace(/\s+/g, '-');
+              window.location.href = `/category/${sectionSlug}`;
+            }}
+          >
+            See all
+            <ChevronRight size={16} className="ml-1" />
+          </button>
+        </div>
       </div>
       
       {/* Property Cards Carousel */}
@@ -77,6 +87,9 @@ const PropertySection: React.FC<PropertySectionProps> = ({
               {/* Property Info */}
               <div className="space-y-1">
                 <h3 className="font-medium text-foreground text-xs md:text-sm">{property.title}</h3>
+                {property.location && (
+                  <p className="text-xs text-muted-foreground">{property.location}</p>
+                )}
                 <div className="flex items-center space-x-1">
                   <Star size={10} className="md:w-3 md:h-3 text-foreground fill-foreground" />
                   <span className="text-xs md:text-sm text-foreground">{property.rating}</span>

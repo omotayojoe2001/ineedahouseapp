@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import Layout from '../components/Layout';
-import { ArrowLeft, Upload, X, Home, Building, Store, Calendar } from 'lucide-react';
+import EnhancedLocationInput from '../components/EnhancedLocationInput';
+import BasicAddressInput from '../components/BasicAddressInput';
+import { ArrowLeft, Upload, X, Home, Building, Store, Calendar, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { PropertyService } from '../services/propertyService';
 
 const CreateRentListingPage = () => {
   const navigate = useNavigate();
@@ -15,25 +18,73 @@ const CreateRentListingPage = () => {
     propertySubType: '',
     bedrooms: '',
     bathrooms: '',
+    guestToilet: '',
     totalRooms: '',
     sqft: '',
-    location: '',
-    address: '',
-    monthlyRent: '',
+    // Location will be handled by EnhancedLocationInput
+    locationData: {
+      stateId: '',
+      cityId: '',
+      areaId: '',
+      streetId: '',
+      detailedAddress: '',
+      landmarks: ''
+    },
+    // Pricing
+    rentType: 'monthly',
+    rentAmount: '',
     serviceCharge: '',
     securityDeposit: '',
-    utilityBills: '',
-    // Rent-specific fields
+    agreementFee: '',
+    commissionFee: '',
+    legalFee: '',
+    cautionFee: '',
+    agencyFee: '',
+    inspectionFee: '',
+    otherFees: [],
+    // Property Features
+    floorLevel: '',
+    totalUnitsInBuilding: '',
+    livingRoom: '',
+    diningArea: '',
+    kitchen: '',
+    kitchenCabinets: '',
+    countertop: '',
+    heatExtractor: '',
+    balcony: '',
+    storage: '',
+    // Utilities & Infrastructure
+    electricityType: '',
+    transformer: '',
+    generator: '',
+    waterSupply: '',
+    borehole: '',
+    treatedWater: '',
+    internetReady: '',
+    wasteManagement: '',
+    // Security
+    gatedCompound: '',
+    security24_7: '',
+    cctv: '',
+    accessControl: '',
+    // Parking
+    parkingSpaces: '',
+    visitorParking: '',
+    // Finishing & Condition
+    popCeiling: '',
+    tiledFloors: '',
+    sanitaryFittings: '',
+    paintCondition: '',
+    buildingCondition: '',
+    // Legal Documentation
+    certificateOfOccupancy: '',
+    deedOfAssignment: '',
+    buildingPlan: '',
+    // Lease Terms
     leaseDuration: '',
     availableFrom: '',
     allowsPets: '',
     furnished: '',
-    nearBusStop: '',
-    busStopDistance: '',
-    parkingSpaces: '',
-    floorLevel: '',
-    buildingAge: '',
-    nearbyLandmarks: '',
   });
 
   const propertyTypes = [
@@ -52,6 +103,10 @@ const CreateRentListingPage = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleLocationChange = (locationData: any) => {
+    setFormData(prev => ({ ...prev, locationData }));
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,20 +128,101 @@ const CreateRentListingPage = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const handleSubmit = () => {
-    console.log('Rent Listing Data:', formData);
-    alert('Rent listing created successfully!');
-    navigate('/my-listings');
+  const handleSubmit = async () => {
+    try {
+      // Map form data to PropertyData interface
+      const propertyData = {
+        title: formData.title,
+        description: formData.description,
+        category: 'rent' as const,
+        property_type: formData.propertySubType,
+        price: parseFloat(formData.rentAmount) || 0,
+        
+        // Location data from EnhancedLocationInput
+        state_id: formData.locationData.stateId,
+        city_id: formData.locationData.cityId,
+        area_id: formData.locationData.areaId,
+        street_id: formData.locationData.streetId || null,
+        address: formData.locationData.detailedAddress,
+        nearby_landmarks: formData.locationData.landmarks,
+        bedrooms: parseInt(formData.bedrooms) || 0,
+        bathrooms: parseInt(formData.bathrooms) || 0,
+        guest_toilet: formData.guestToilet,
+        
+        // Pricing
+        rent_type: formData.rentType as 'daily' | 'weekly' | 'monthly' | 'annual',
+        annual_rent: parseFloat(formData.rentAmount) || 0,
+        security_deposit: parseFloat(formData.securityDeposit) || 0,
+        service_charge: parseFloat(formData.serviceCharge) || 0,
+        agreement_fee: parseFloat(formData.agreementFee) || 0,
+        commission_fee: parseFloat(formData.commissionFee) || 0,
+        legal_fee: parseFloat(formData.legalFee) || 0,
+        caution_fee: parseFloat(formData.cautionFee) || 0,
+        agency_fee: parseFloat(formData.agencyFee) || 0,
+        inspection_fee: parseFloat(formData.inspectionFee) || 0,
+        other_fees: formData.otherFees || [],
+        
+        // Building details
+        floor_level: formData.floorLevel,
+        total_units_in_building: parseInt(formData.totalUnitsInBuilding) || 0,
+        
+        // Interior features
+        living_room: formData.livingRoom,
+        dining_area: formData.diningArea,
+        kitchen_cabinets: formData.kitchenCabinets,
+        countertop: formData.countertop,
+        heat_extractor: formData.heatExtractor,
+        balcony: formData.balcony,
+        storage: formData.storage,
+        
+        // Utilities
+        electricity_type: formData.electricityType,
+        transformer: formData.transformer,
+        generator: formData.generator,
+        water_supply: formData.waterSupply,
+        internet_ready: formData.internetReady,
+        
+        // Security
+        gated_compound: formData.gatedCompound,
+        security_24_7: formData.security24_7,
+        cctv: formData.cctv,
+        parking_spaces: formData.parkingSpaces,
+        
+        // Finishing
+        pop_ceiling: formData.popCeiling,
+        tiled_floors: formData.tiledFloors,
+        building_condition: formData.buildingCondition,
+        certificate_of_occupancy: formData.certificateOfOccupancy,
+        deed_of_assignment: formData.deedOfAssignment,
+        building_plan: formData.buildingPlan,
+        
+        // Lease terms
+        available_from: formData.availableFrom,
+        lease_terms: formData.leaseDuration,
+        
+        status: 'active' as const
+      };
+
+      await PropertyService.createProperty(propertyData);
+      alert('Rent listing created successfully!');
+      navigate('/my-listings');
+    } catch (error) {
+      console.error('Error creating listing:', error);
+      alert('Failed to create listing. Please try again.');
+    }
   };
 
   const renderStep = () => {
     switch (currentStep) {
       case 1:
         return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-bold mb-2">Property Type for Rent</h2>
-              <p className="text-muted-foreground mb-4">What type of property are you renting out?</p>
+          <div className="space-y-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/70 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Home className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold mb-3 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Property Type for Rent</h2>
+              <p className="text-muted-foreground mb-6">What type of property are you renting out?</p>
             </div>
             
             <div className="grid gap-4">
@@ -96,18 +232,27 @@ const CreateRentListingPage = () => {
                   <button
                     key={type.id}
                     onClick={() => setPropertyType(type.id)}
-                    className={`p-4 border rounded-lg text-left transition-colors ${
+                    className={`p-6 border-2 rounded-2xl text-left transition-all duration-300 hover:shadow-lg ${
                       propertyType === type.id 
-                        ? 'border-primary bg-primary/5' 
-                        : 'border-border hover:bg-muted/30'
+                        ? 'border-primary bg-gradient-to-r from-primary/10 to-primary/5 shadow-lg' 
+                        : 'border-border hover:border-primary/30 hover:bg-primary/5'
                     }`}
                   >
-                    <div className="flex items-start gap-3">
-                      <IconComponent size={24} className="text-primary mt-1" />
-                      <div>
-                        <h3 className="font-semibold">{type.label}</h3>
-                        <p className="text-sm text-muted-foreground">{type.description}</p>
+                    <div className="flex items-start gap-4">
+                      <div className={`p-3 rounded-xl ${
+                        propertyType === type.id ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
+                      }`}>
+                        <IconComponent size={24} />
                       </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg mb-2">{type.label}</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{type.description}</p>
+                      </div>
+                      {propertyType === type.id && (
+                        <div className="text-primary">
+                          <CheckCircle size={24} />
+                        </div>
+                      )}
                     </div>
                   </button>
                 );
@@ -120,11 +265,11 @@ const CreateRentListingPage = () => {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold mb-2">Rental Property Details</h2>
+              <h2 className="text-xl font-bold mb-2">Property Details & Location</h2>
               <p className="text-muted-foreground mb-4">Tell us about your rental property</p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium mb-2">Property Title</label>
                 <input
@@ -150,32 +295,75 @@ const CreateRentListingPage = () => {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Bedrooms</label>
-                  <select
-                    value={formData.bedrooms}
-                    onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg"
-                  >
-                    <option value="">Select bedrooms</option>
-                    {[1,2,3,4,5,6].map(num => (
-                      <option key={num} value={num}>{num}</option>
-                    ))}
-                  </select>
+              {/* Room Details */}
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold mb-3">Room Configuration</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Bedrooms</label>
+                    <select
+                      value={formData.bedrooms}
+                      onChange={(e) => handleInputChange('bedrooms', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                    >
+                      <option value="">Select</option>
+                      {[1,2,3,4,5,6].map(num => (
+                        <option key={num} value={num}>{num}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Bathrooms</label>
+                    <select
+                      value={formData.bathrooms}
+                      onChange={(e) => handleInputChange('bathrooms', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                    >
+                      <option value="">Select</option>
+                      {[1,2,3,4,5,6].map(num => (
+                        <option key={num} value={num}>{num}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Guest Toilet</label>
+                    <select
+                      value={formData.guestToilet}
+                      onChange={(e) => handleInputChange('guestToilet', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                    >
+                      <option value="">Select</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Bathrooms</label>
-                  <select
-                    value={formData.bathrooms}
-                    onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg"
-                  >
-                    <option value="">Select bathrooms</option>
-                    {[1,2,3,4,5,6].map(num => (
-                      <option key={num} value={num}>{num}</option>
-                    ))}
-                  </select>
+              </div>
+
+              {/* Location Details */}
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold mb-3">Location Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Street Address (with auto-complete)</label>
+                    <BasicAddressInput
+                      value={formData.locationData.detailedAddress}
+                      onChange={(address) => setFormData(prev => ({
+                        ...prev,
+                        locationData: { ...prev.locationData, detailedAddress: address }
+                      }))}
+                      placeholder="Enter your property address"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">💡 This auto-fills from your selection above</p>
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <p className="text-sm text-gray-600 mb-3">Or manually select location:</p>
+                    <EnhancedLocationInput
+                      onLocationChange={handleLocationChange}
+                      initialData={formData.locationData}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -188,17 +376,6 @@ const CreateRentListingPage = () => {
                   placeholder="Describe your rental property..."
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Location</label>
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) => handleInputChange('location', e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg"
-                  placeholder="e.g., Lekki Phase 1, Lagos"
-                />
-              </div>
             </div>
           </div>
         );
@@ -208,45 +385,406 @@ const CreateRentListingPage = () => {
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold mb-2">Photos & Property Features</h2>
-              <p className="text-muted-foreground mb-4">Upload photos of your rental property</p>
+              <p className="text-muted-foreground mb-4">Upload photos and specify property features</p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Property Photos</label>
-              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  id="image-upload"
-                />
-                <label htmlFor="image-upload" className="cursor-pointer">
-                  <Upload size={32} className="mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Upload photos (Max 10)</p>
-                </label>
-              </div>
-              
-              {images.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 mt-4">
-                  {images.map((image, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={URL.createObjectURL(image)}
-                        alt={`Upload ${index + 1}`}
-                        className="w-full h-20 object-cover rounded-lg"
-                      />
-                      <button
-                        onClick={() => removeImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
+            <div className="space-y-6">
+              {/* Photo Upload */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Property Photos</label>
+                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label htmlFor="image-upload" className="cursor-pointer">
+                    <Upload size={32} className="mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Upload photos (Max 10)</p>
+                  </label>
                 </div>
-              )}
+                
+                {images.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mt-4">
+                    {images.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={URL.createObjectURL(image)}
+                          alt={`Upload ${index + 1}`}
+                          className="w-full h-20 object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => removeImage(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Building Details */}
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold mb-3">Building Information</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Which floor is the house on?</label>
+                    <select
+                      value={formData.floorLevel}
+                      onChange={(e) => handleInputChange('floorLevel', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                    >
+                      <option value="">Choose floor</option>
+                      <option value="ground">Ground floor (downstairs)</option>
+                      <option value="1st">1st floor (upstairs)</option>
+                      <option value="2nd">2nd floor</option>
+                      <option value="3rd">3rd floor</option>
+                      <option value="4th+">4th floor or higher</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">How many flats are in the building?</label>
+                    <input
+                      type="number"
+                      value={formData.totalUnitsInBuilding}
+                      onChange={(e) => handleInputChange('totalUnitsInBuilding', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="e.g. 12"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Interior Features */}
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold mb-3">Inside the House</h3>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">How is the sitting room?</label>
+                      <select
+                        value={formData.livingRoom}
+                        onChange={(e) => handleInputChange('livingRoom', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="spacious">Very big (spacious)</option>
+                        <option value="well-lit">Bright with good light</option>
+                        <option value="compact">Small but okay</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Dining space</label>
+                      <select
+                        value={formData.diningArea}
+                        onChange={(e) => handleInputChange('diningArea', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="dedicated">Separate dining room</option>
+                        <option value="combined">Part of sitting room</option>
+                        <option value="none">No dining space</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Kitchen cabinets</label>
+                      <select
+                        value={formData.kitchenCabinets}
+                        onChange={(e) => handleInputChange('kitchenCabinets', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="fitted">Has kitchen cabinets</option>
+                        <option value="none">No cabinets</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Kitchen counter</label>
+                      <select
+                        value={formData.countertop}
+                        onChange={(e) => handleInputChange('countertop', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="granite">Granite (stone)</option>
+                        <option value="marble">Marble (smooth stone)</option>
+                        <option value="laminate">Normal counter</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Kitchen fan (extractor)</label>
+                      <select
+                        value={formData.heatExtractor}
+                        onChange={(e) => handleInputChange('heatExtractor', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Balcony (verandah)</label>
+                      <select
+                        value={formData.balcony}
+                        onChange={(e) => handleInputChange('balcony', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Store room</label>
+                      <select
+                        value={formData.storage}
+                        onChange={(e) => handleInputChange('storage', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="in-apartment">Store inside the house</option>
+                        <option value="external">Store outside the house</option>
+                        <option value="none">No store room</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Utilities & Infrastructure */}
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold mb-3">Light, Water & Other Services</h3>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Type of light (electricity)</label>
+                      <select
+                        value={formData.electricityType}
+                        onChange={(e) => handleInputChange('electricityType', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="public">NEPA/PHCN light</option>
+                        <option value="prepaid">Prepaid meter</option>
+                        <option value="postpaid">Monthly bill</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Transformer</label>
+                      <select
+                        value={formData.transformer}
+                        onChange={(e) => handleInputChange('transformer', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="dedicated">Own transformer</option>
+                        <option value="shared">Shared transformer</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Generator</label>
+                      <select
+                        value={formData.generator}
+                        onChange={(e) => handleInputChange('generator', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="estate-managed">Estate provides generator</option>
+                        <option value="personal">Your own generator</option>
+                        <option value="none">No generator</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Water supply</label>
+                      <select
+                        value={formData.waterSupply}
+                        onChange={(e) => handleInputChange('waterSupply', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="borehole">Borehole water</option>
+                        <option value="treated">Clean treated water</option>
+                        <option value="public">Government water</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Internet connection</label>
+                      <select
+                        value={formData.internetReady}
+                        onChange={(e) => handleInputChange('internetReady', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="fiber-ready">Fast internet ready</option>
+                        <option value="cable-ready">Cable internet ready</option>
+                        <option value="none">No internet setup</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Security & Parking */}
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold mb-3">Security & Car Parking</h3>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Is there a gate?</label>
+                      <select
+                        value={formData.gatedCompound}
+                        onChange={(e) => handleInputChange('gatedCompound', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="yes">Yes, gated compound</option>
+                        <option value="no">No gate</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Security guard</label>
+                      <select
+                        value={formData.security24_7}
+                        onChange={(e) => handleInputChange('security24_7', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="yes">Yes, day and night</option>
+                        <option value="no">No security guard</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Security cameras</label>
+                      <select
+                        value={formData.cctv}
+                        onChange={(e) => handleInputChange('cctv', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="common-areas">Only in common areas</option>
+                        <option value="full-coverage">Everywhere</option>
+                        <option value="none">No cameras</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Car parking space</label>
+                      <select
+                        value={formData.parkingSpaces}
+                        onChange={(e) => handleInputChange('parkingSpaces', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="1">1 car space</option>
+                        <option value="2">2 car spaces</option>
+                        <option value="3+">3 or more spaces</option>
+                        <option value="none">No parking space</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Finishing & Legal */}
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold mb-3">House Finishing & Papers</h3>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">POP ceiling (smooth ceiling)</label>
+                      <select
+                        value={formData.popCeiling}
+                        onChange={(e) => handleInputChange('popCeiling', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Floor tiles</label>
+                      <select
+                        value={formData.tiledFloors}
+                        onChange={(e) => handleInputChange('tiledFloors', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="yes">Yes, tiled floors</option>
+                        <option value="no">No tiles (cement floor)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">How is the building?</label>
+                      <select
+                        value={formData.buildingCondition}
+                        onChange={(e) => handleInputChange('buildingCondition', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="newly-built">Brand new building</option>
+                        <option value="renovated">Just renovated</option>
+                        <option value="good">Good condition</option>
+                        <option value="fair">Okay condition</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">C of O (government paper)</label>
+                      <select
+                        value={formData.certificateOfOccupancy}
+                        onChange={(e) => handleInputChange('certificateOfOccupancy', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="available">Yes, we have it</option>
+                        <option value="processing">Still getting it</option>
+                        <option value="not-available">Don't have it</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Deed (ownership paper)</label>
+                      <select
+                        value={formData.deedOfAssignment}
+                        onChange={(e) => handleInputChange('deedOfAssignment', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="available">Yes, we have it</option>
+                        <option value="processing">Still getting it</option>
+                        <option value="not-available">Don't have it</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Building approval</label>
+                      <select
+                        value={formData.buildingPlan}
+                        onChange={(e) => handleInputChange('buildingPlan', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                      >
+                        <option value="">Choose</option>
+                        <option value="approved">Government approved</option>
+                        <option value="processing">Still getting approval</option>
+                        <option value="not-available">No approval yet</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -259,81 +797,245 @@ const CreateRentListingPage = () => {
               <p className="text-muted-foreground mb-4">Set your rental terms and pricing</p>
             </div>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Monthly Rent (₦)</label>
-                  <input
-                    type="number"
-                    value={formData.monthlyRent}
-                    onChange={(e) => handleInputChange('monthlyRent', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg"
-                    placeholder="150000"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Security Deposit (₦)</label>
-                  <input
-                    type="number"
-                    value={formData.securityDeposit}
-                    onChange={(e) => handleInputChange('securityDeposit', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg"
-                    placeholder="300000"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Lease Duration</label>
-                  <select
-                    value={formData.leaseDuration}
-                    onChange={(e) => handleInputChange('leaseDuration', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg"
-                  >
-                    <option value="">Select duration</option>
-                    <option value="6months">6 Months</option>
-                    <option value="1year">1 Year</option>
-                    <option value="2years">2 Years</option>
-                    <option value="flexible">Flexible</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Available From</label>
-                  <input
-                    type="date"
-                    value={formData.availableFrom}
-                    onChange={(e) => handleInputChange('availableFrom', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg"
-                  />
+            <div className="space-y-6">
+              {/* Rent Type and Amount */}
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold mb-3">Rent Details</h3>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Rent Type</label>
+                    <select
+                      value={formData.rentType}
+                      onChange={(e) => handleInputChange('rentType', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                    >
+                      <option value="daily">Daily Rent</option>
+                      <option value="weekly">Weekly Rent</option>
+                      <option value="monthly">Monthly Rent</option>
+                      <option value="annual">Annual Rent</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      {formData.rentType === 'daily' ? 'Daily' : 
+                       formData.rentType === 'weekly' ? 'Weekly' : 
+                       formData.rentType === 'monthly' ? 'Monthly' : 'Annual'} Rent (₦)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.rentAmount}
+                      onChange={(e) => handleInputChange('rentAmount', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="150000"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Allows Pets?</label>
-                  <select
-                    value={formData.allowsPets}
-                    onChange={(e) => handleInputChange('allowsPets', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg"
-                  >
-                    <option value="">Select option</option>
-                    <option value="yes">Yes</option>
-                    <option value="no">No</option>
-                  </select>
+              {/* Additional Fees */}
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold mb-3">Additional Fees</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Security Deposit (₦)</label>
+                    <input
+                      type="number"
+                      value={formData.securityDeposit}
+                      onChange={(e) => handleInputChange('securityDeposit', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="300000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Service Charge (₦)</label>
+                    <input
+                      type="number"
+                      value={formData.serviceCharge}
+                      onChange={(e) => handleInputChange('serviceCharge', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="25000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Agreement Fee (₦)</label>
+                    <input
+                      type="number"
+                      value={formData.agreementFee}
+                      onChange={(e) => handleInputChange('agreementFee', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="50000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Commission Fee (₦)</label>
+                    <input
+                      type="number"
+                      value={formData.commissionFee}
+                      onChange={(e) => handleInputChange('commissionFee', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="75000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Legal Fee (₦)</label>
+                    <input
+                      type="number"
+                      value={formData.legalFee}
+                      onChange={(e) => handleInputChange('legalFee', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="30000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Agency Fee (₦)</label>
+                    <input
+                      type="number"
+                      value={formData.agencyFee}
+                      onChange={(e) => handleInputChange('agencyFee', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="100000"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Furnished?</label>
-                  <select
-                    value={formData.furnished}
-                    onChange={(e) => handleInputChange('furnished', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg"
+              </div>
+
+              {/* Other Fees */}
+              <div className="bg-white p-4 rounded-lg border">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold">Other Fees</h3>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, otherFees: [...(prev.otherFees || []), { name: '', amount: '' }] }))}
+                    className="flex items-center gap-2 text-primary hover:text-primary/80"
                   >
-                    <option value="">Select option</option>
-                    <option value="fully">Fully Furnished</option>
-                    <option value="semi">Semi Furnished</option>
-                    <option value="unfurnished">Unfurnished</option>
-                  </select>
+                    <Plus size={16} />
+                    Add Fee
+                  </button>
+                </div>
+                {formData.otherFees?.map((fee, index) => (
+                  <div key={index} className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={fee.name}
+                      onChange={(e) => {
+                        const newFees = [...(formData.otherFees || [])];
+                        newFees[index] = { ...newFees[index], name: e.target.value };
+                        setFormData(prev => ({ ...prev, otherFees: newFees }));
+                      }}
+                      className="flex-1 px-3 py-2 border border-border rounded-lg"
+                      placeholder="Fee name"
+                    />
+                    <input
+                      type="number"
+                      value={fee.amount}
+                      onChange={(e) => {
+                        const newFees = [...(formData.otherFees || [])];
+                        newFees[index] = { ...newFees[index], amount: e.target.value };
+                        setFormData(prev => ({ ...prev, otherFees: newFees }));
+                      }}
+                      className="w-32 px-3 py-2 border border-border rounded-lg"
+                      placeholder="Amount"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, otherFees: (prev.otherFees || []).filter((_, i) => i !== index) }))}
+                      className="p-2 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total Calculation */}
+              <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-4 rounded-lg border border-primary/20">
+                <h3 className="font-semibold mb-3">Cost Summary</h3>
+                <div className="space-y-2 text-sm">
+                  {formData.rentAmount && (
+                    <div className="flex justify-between">
+                      <span>{formData.rentType.charAt(0).toUpperCase() + formData.rentType.slice(1)} Rent:</span>
+                      <span>₦{parseFloat(formData.rentAmount || '0').toLocaleString()}</span>
+                    </div>
+                  )}
+                  {formData.securityDeposit && (
+                    <div className="flex justify-between">
+                      <span>Security Deposit:</span>
+                      <span>₦{parseFloat(formData.securityDeposit || '0').toLocaleString()}</span>
+                    </div>
+                  )}
+                  {formData.serviceCharge && (
+                    <div className="flex justify-between">
+                      <span>Service Charge:</span>
+                      <span>₦{parseFloat(formData.serviceCharge || '0').toLocaleString()}</span>
+                    </div>
+                  )}
+                  {formData.agreementFee && (
+                    <div className="flex justify-between">
+                      <span>Agreement Fee:</span>
+                      <span>₦{parseFloat(formData.agreementFee || '0').toLocaleString()}</span>
+                    </div>
+                  )}
+                  {formData.commissionFee && (
+                    <div className="flex justify-between">
+                      <span>Commission Fee:</span>
+                      <span>₦{parseFloat(formData.commissionFee || '0').toLocaleString()}</span>
+                    </div>
+                  )}
+                  {(formData.otherFees || []).map((fee, index) => 
+                    fee.name && fee.amount ? (
+                      <div key={index} className="flex justify-between">
+                        <span>{fee.name}:</span>
+                        <span>₦{parseFloat(fee.amount || '0').toLocaleString()}</span>
+                      </div>
+                    ) : null
+                  )}
+                  <div className="border-t border-primary/20 pt-2 mt-2">
+                    <div className="flex justify-between font-semibold text-lg">
+                      <span>Total Upfront Cost:</span>
+                      <span className="text-primary">
+                        ₦{(
+                          (parseFloat(formData.rentAmount) || 0) +
+                          (parseFloat(formData.securityDeposit) || 0) +
+                          (parseFloat(formData.serviceCharge) || 0) +
+                          (parseFloat(formData.agreementFee) || 0) +
+                          (parseFloat(formData.commissionFee) || 0) +
+                          (parseFloat(formData.legalFee) || 0) +
+                          (parseFloat(formData.agencyFee) || 0) +
+                          (formData.otherFees || []).reduce((sum, fee) => sum + (parseFloat(fee.amount) || 0), 0)
+                        ).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lease Terms */}
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold mb-3">Lease Terms</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Lease Duration</label>
+                    <select
+                      value={formData.leaseDuration}
+                      onChange={(e) => handleInputChange('leaseDuration', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                    >
+                      <option value="">Select duration</option>
+                      <option value="6months">6 Months</option>
+                      <option value="1year">1 Year</option>
+                      <option value="2years">2 Years</option>
+                      <option value="flexible">Flexible</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Available From</label>
+                    <input
+                      type="date"
+                      value={formData.availableFrom}
+                      onChange={(e) => handleInputChange('availableFrom', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -348,35 +1050,37 @@ const CreateRentListingPage = () => {
   return (
     <Layout activeTab="upload">
       <div className="bg-background min-h-screen desktop-nav-spacing">
-        <div className="px-4 pt-4 pb-6 border-b border-border">
+        <div className="px-4 pt-4 pb-6 border-b border-border bg-gradient-to-r from-primary/5 to-primary/10">
           <div className="flex items-center gap-3 mb-4">
-            <button onClick={() => navigate(-1)} className="p-2 hover:bg-muted rounded-lg">
-              <ArrowLeft size={20} />
+            <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/80 rounded-lg transition-colors">
+              <ArrowLeft size={20} className="text-primary" />
             </button>
             <div>
-              <h1 className="text-xl font-bold">List Property for Rent</h1>
-              <p className="text-sm text-muted-foreground">Step {currentStep} of 4</p>
+              <h1 className="text-xl font-bold text-primary">List Property for Rent</h1>
+              <p className="text-sm text-muted-foreground">Step {currentStep} of 4 • Create your rental listing</p>
             </div>
           </div>
           
-          <div className="w-full bg-muted rounded-full h-2">
+          <div className="w-full bg-white/50 rounded-full h-3 overflow-hidden">
             <div 
-              className="bg-primary h-2 rounded-full transition-all duration-300"
+              className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full transition-all duration-500 ease-out"
               style={{ width: `${(currentStep / 4) * 100}%` }}
             />
           </div>
         </div>
 
-        <div className="px-4 py-6 pb-32">
-          {renderStep()}
+        <div className="px-4 py-6 pb-32 bg-gradient-to-b from-background to-muted/30">
+          <div className="max-w-2xl mx-auto">
+            {renderStep()}
+          </div>
         </div>
 
-        <div className="fixed bottom-20 lg:bottom-6 left-0 right-0 px-4 bg-background border-t border-border py-4 z-50">
-          <div className="flex gap-3">
+        <div className="fixed bottom-20 lg:bottom-6 left-0 right-0 px-4 bg-white/95 backdrop-blur-sm border-t border-border py-4 z-50 shadow-lg">
+          <div className="max-w-2xl mx-auto flex gap-3">
             {currentStep > 1 && (
               <button
                 onClick={handleBack}
-                className="flex-1 py-3 border border-border rounded-lg font-medium hover:bg-muted"
+                className="flex-1 py-3 border border-border rounded-xl font-medium hover:bg-muted transition-colors"
               >
                 Back
               </button>
@@ -384,9 +1088,9 @@ const CreateRentListingPage = () => {
             <button
               onClick={currentStep === 4 ? handleSubmit : handleNext}
               disabled={currentStep === 1 && !propertyType}
-              className="flex-1 py-3 bg-primary text-primary-foreground rounded-lg font-medium disabled:opacity-50"
+              className="flex-1 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl font-medium disabled:opacity-50 shadow-lg hover:shadow-xl transition-all"
             >
-              {currentStep === 4 ? 'Publish Rental' : 'Next'}
+              {currentStep === 4 ? 'Publish Rental ✨' : 'Continue'}
             </button>
           </div>
         </div>

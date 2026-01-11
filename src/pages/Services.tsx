@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import PropertyCard from '../components/PropertyCard';
-import { Search, SlidersHorizontal, Truck, Wrench, Paintbrush, Users } from 'lucide-react';
+import { Search, SlidersHorizontal, Truck, Wrench, Paintbrush, Users, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Import service images
@@ -181,6 +181,29 @@ const Services: React.FC = () => {
 
         {/* Services List */}
         <div className="px-2 py-4">
+          {/* Become Inspector Banner */}
+          <div className="mx-2 mb-4">
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-100 p-2 rounded-full">
+                  <Shield className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-900">Offer Property Inspection Services</h3>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Join our network of trusted property inspectors
+                  </p>
+                </div>
+                <button 
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  onClick={() => navigate('/inspector-registration')}
+                >
+                  Join Now
+                </button>
+              </div>
+            </div>
+          </div>
+          
           <div className="flex items-center justify-between mb-4 px-2">
             <p className="text-sm text-muted-foreground">{filteredServices.length} services available</p>
           </div>
