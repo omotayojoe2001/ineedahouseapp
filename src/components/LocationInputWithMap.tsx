@@ -75,8 +75,27 @@ const LocationInputWithMap: React.FC<LocationInputWithMapProps> = ({
           setCoordinates({ lat: latitude, lng: longitude });
           setMapKey(prev => prev + 1); // Refresh map
           
-          // Show raw coordinates
-          onChange(`${latitude}, ${longitude}`);
+          // Reverse geocode to get actual address
+          try {
+            console.log('Attempting reverse geocoding for:', latitude, longitude);
+            const response = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=AIzaSyCWcmsFtBKTfI2Dg3YbdO7Fud6c5lNFNkA`
+            );
+            const data = await response.json();
+            console.log('Geocoding response:', data);
+            
+            if (data.results && data.results.length > 0) {
+              const address = data.results[0].formatted_address;
+              console.log('Found address:', address);
+              onChange(address);
+            } else {
+              console.log('No results from geocoding, using coordinates');
+              onChange(`${latitude}, ${longitude}`);
+            }
+          } catch (error) {
+            console.error('Reverse geocoding failed:', error);
+            onChange(`${latitude}, ${longitude}`);
+          }
           
           if (onLocationChange) {
             onLocationChange({
