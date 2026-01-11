@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Layout from '../components/Layout';
 import EnhancedLocationInput from '../components/EnhancedLocationInput';
-import BasicAddressInput from '../components/BasicAddressInput';
+import LocationInputWithMap from '../components/LocationInputWithMap';
 import { ArrowLeft, Upload, X, Home, Building, Store, Calendar, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PropertyService } from '../services/propertyService';
@@ -346,19 +346,26 @@ const CreateRentListingPage = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Street Address (with auto-complete)</label>
-                    <BasicAddressInput
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Property Location</label>
+                    <LocationInputWithMap
                       value={formData.locationData.detailedAddress}
                       onChange={(address) => setFormData(prev => ({
                         ...prev,
                         locationData: { ...prev.locationData, detailedAddress: address }
                       }))}
-                      placeholder="Enter your property address"
+                      onLocationChange={(locationData) => {
+                        console.log('Location data:', locationData);
+                        // You can auto-populate state/city here if needed
+                      }}
+                      placeholder="Enter your property address or get current location"
                     />
+                  </div>
                     <p className="text-xs text-gray-500 mt-1">💡 This auto-fills from your selection above</p>
                   </div>
                   
                   <div className="border-t pt-4">
-                    <p className="text-sm text-gray-600 mb-3">Or manually select location:</p>
+                    <p className="text-sm text-gray-600 mb-3">Additional location details (optional):</p>
                     <EnhancedLocationInput
                       onLocationChange={handleLocationChange}
                       initialData={formData.locationData}

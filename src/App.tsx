@@ -33,6 +33,8 @@ import CreateShortletListingPage from "./pages/CreateShortletListingPage";
 import CreateEventCenterListingPage from "./pages/CreateEventCenterListingPage";
 import CreateShopListingPage from "./pages/CreateShopListingPage";
 import AdminLocationPage from "./pages/AdminLocationPage";
+import DiagnosticPage from "./pages/DiagnosticPage";
+import MapSearchPage from "./pages/MapSearchPage";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -90,6 +92,8 @@ const App = () => (
             <Route path="/privacy-security" element={<PrivacySecurity />} />
             <Route path="/help-support" element={<HelpSupport />} />
             <Route path="/admin-locations" element={<AdminLocationPage />} />
+            <Route path="/diagnostic" element={<DiagnosticPage />} />
+            <Route path="/map-search" element={<MapSearchPage />} />
             <Route path="/property/:id" element={<PropertyDetails />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
