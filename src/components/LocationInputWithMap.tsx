@@ -64,8 +64,8 @@ const LocationInputWithMap: React.FC<LocationInputWithMapProps> = ({
     
     if (navigator.geolocation) {
       const options = deviceType === 'mobile' 
-        ? { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        : { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 };
+        ? { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        : { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
 
       navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -75,9 +75,9 @@ const LocationInputWithMap: React.FC<LocationInputWithMapProps> = ({
           setCoordinates({ lat: latitude, lng: longitude });
           setMapKey(prev => prev + 1); // Refresh map
           
-          // Simple address generation without API
-          const address = generateSimpleAddress(latitude, longitude);
-          onChange(address);
+          // Show coordinates and ask user to enter address manually
+          onChange(`${latitude}, ${longitude}`);
+          alert('Please enter your address manually in the text field above.');
           
           if (onLocationChange) {
             onLocationChange({
@@ -102,46 +102,7 @@ const LocationInputWithMap: React.FC<LocationInputWithMapProps> = ({
     }
   };
 
-  const generateSimpleAddress = (lat: number, lng: number) => {
-    // Lagos coordinate ranges
-    if (lat >= 6.4 && lat <= 6.7 && lng >= 3.2 && lng <= 3.7) {
-      const areas = [
-        { name: 'Lekki Phase 1', lat: 6.4474, lng: 3.4653 },
-        { name: 'Victoria Island', lat: 6.4281, lng: 3.4219 },
-        { name: 'Ikeja', lat: 6.5954, lng: 3.3364 },
-        { name: 'Yaba', lat: 6.5158, lng: 3.3696 },
-        { name: 'Surulere', lat: 6.4969, lng: 3.3534 },
-        { name: 'Ikoyi', lat: 6.4541, lng: 3.4316 },
-        { name: 'Ajah', lat: 6.4698, lng: 3.5852 }
-      ];
-      
-      let closest = areas[0];
-      let minDistance = Math.abs(lat - closest.lat) + Math.abs(lng - closest.lng);
-      
-      for (const area of areas) {
-        const distance = Math.abs(lat - area.lat) + Math.abs(lng - area.lng);
-        if (distance < minDistance) {
-          minDistance = distance;
-          closest = area;
-        }
-      }
-      
-      return `${closest.name}, Lagos, Nigeria`;
-    }
-    
-    // Abuja coordinate ranges
-    if (lat >= 8.9 && lat <= 9.3 && lng >= 7.2 && lng <= 7.6) {
-      return 'Abuja, FCT, Nigeria';
-    }
-    
-    // Port Harcourt coordinate ranges
-    if (lat >= 4.7 && lat <= 4.9 && lng >= 6.9 && lng <= 7.1) {
-      return 'Port Harcourt, Rivers State, Nigeria';
-    }
-    
-    // Default for other Nigerian locations
-    return `${lat.toFixed(4)}, ${lng.toFixed(4)} (Nigeria)`;
-  };
+
 
   const MapPreview = () => {
     if (!coordinates) {
@@ -196,59 +157,6 @@ const LocationInputWithMap: React.FC<LocationInputWithMapProps> = ({
           placeholder={placeholder}
           className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
-      </div>
-
-      {/* Device Info */}
-      <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-sm">
-        {deviceType === 'mobile' ? (
-          <Smartphone className="text-green-500" size={16} />
-        ) : (
-          <Monitor className="text-orange-500" size={16} />
-        )}
-        <span className="text-gray-600">
-          {deviceType === 'mobile' 
-            ? '📱 Mobile GPS should be accurate'
-            : '💻 Desktop GPS may be inaccurate'
-          }
-        </span>
-      </div>
-
-      {/* Get Location Button */}
-      <button
-        type="button"
-        onClick={getCurrentLocation}
-        disabled={loading}
-        className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium ${
-          deviceType === 'mobile'
-            ? 'bg-green-500 hover:bg-green-600 text-white'
-            : 'bg-orange-500 hover:bg-orange-600 text-white'
-        } disabled:opacity-50`}
-      >
-        {loading ? (
-          <>
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            Getting location...
-          </>
-        ) : (
-          <>
-            <Navigation size={16} />
-            Get My Location
-          </>
-        )}
-      </button>
-
-      {/* Live Map Preview */}
-      <div>
-        <h4 className="font-medium mb-2 flex items-center gap-2">
-          <MapPin size={16} />
-          Live Map Preview
-        </h4>
-        <MapPreview />
-        {coordinates && (
-          <p className="text-xs text-gray-500 mt-2">
-            📍 This is where your property will be shown to potential tenants
-          </p>
-        )}
       </div>
     </div>
   );
