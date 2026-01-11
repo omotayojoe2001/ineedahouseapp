@@ -75,27 +75,9 @@ const LocationInputWithMap: React.FC<LocationInputWithMapProps> = ({
           setCoordinates({ lat: latitude, lng: longitude });
           setMapKey(prev => prev + 1); // Refresh map
           
-          // Reverse geocode to get actual address
-          try {
-            console.log('Attempting reverse geocoding for:', latitude, longitude);
-            const response = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=AIzaSyCWcmsFtBKTfI2Dg3YbdO7Fud6c5lNFNkA`
-            );
-            const data = await response.json();
-            console.log('Geocoding response:', data);
-            
-            if (data.results && data.results.length > 0) {
-              const address = data.results[0].formatted_address;
-              console.log('Found address:', address);
-              onChange(address);
-            } else {
-              console.log('No results from geocoding, using coordinates');
-              onChange(`${latitude}, ${longitude}`);
-            }
-          } catch (error) {
-            console.error('Reverse geocoding failed:', error);
-            onChange(`${latitude}, ${longitude}`);
-          }
+          // Simple address generation without API
+          const address = generateSimpleAddress(latitude, longitude);
+          onChange(address);
           
           if (onLocationChange) {
             onLocationChange({
@@ -120,31 +102,45 @@ const LocationInputWithMap: React.FC<LocationInputWithMapProps> = ({
     }
   };
 
-  const generateFallbackAddress = (lat: number, lng: number) => {
-    // Simple fallback based on known Lagos/Nigeria coordinates
-    const lagosAreas = [
-      { name: 'Lekki Phase 1', lat: 6.4474, lng: 3.4653, radius: 0.05 },
-      { name: 'Victoria Island', lat: 6.4281, lng: 3.4219, radius: 0.03 },
-      { name: 'Ikeja', lat: 6.5954, lng: 3.3364, radius: 0.05 },
-      { name: 'Yaba', lat: 6.5158, lng: 3.3696, radius: 0.03 },
-      { name: 'Surulere', lat: 6.4969, lng: 3.3534, radius: 0.04 },
-      { name: 'Ikoyi', lat: 6.4541, lng: 3.4316, radius: 0.02 },
-      { name: 'Ajah', lat: 6.4698, lng: 3.5852, radius: 0.06 }
-    ];
-
-    // Find closest area
-    let closestArea = 'Lagos';
-    let minDistance = Infinity;
-    
-    for (const area of lagosAreas) {
-      const distance = Math.sqrt(Math.pow(lat - area.lat, 2) + Math.pow(lng - area.lng, 2));
-      if (distance < area.radius && distance < minDistance) {
-        minDistance = distance;
-        closestArea = area.name;
+  const generateSimpleAddress = (lat: number, lng: number) => {
+    // Lagos coordinate ranges
+    if (lat >= 6.4 && lat <= 6.7 && lng >= 3.2 && lng <= 3.7) {
+      const areas = [
+        { name: 'Lekki Phase 1', lat: 6.4474, lng: 3.4653 },
+        { name: 'Victoria Island', lat: 6.4281, lng: 3.4219 },
+        { name: 'Ikeja', lat: 6.5954, lng: 3.3364 },
+        { name: 'Yaba', lat: 6.5158, lng: 3.3696 },
+        { name: 'Surulere', lat: 6.4969, lng: 3.3534 },
+        { name: 'Ikoyi', lat: 6.4541, lng: 3.4316 },
+        { name: 'Ajah', lat: 6.4698, lng: 3.5852 }
+      ];
+      
+      let closest = areas[0];
+      let minDistance = Math.abs(lat - closest.lat) + Math.abs(lng - closest.lng);
+      
+      for (const area of areas) {
+        const distance = Math.abs(lat - area.lat) + Math.abs(lng - area.lng);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closest = area;
+        }
       }
+      
+      return `${closest.name}, Lagos, Nigeria`;
     }
     
-    return `Near ${closestArea}, Lagos, Nigeria`;
+    // Abuja coordinate ranges
+    if (lat >= 8.9 && lat <= 9.3 && lng >= 7.2 && lng <= 7.6) {
+      return 'Abuja, FCT, Nigeria';
+    }
+    
+    // Port Harcourt coordinate ranges
+    if (lat >= 4.7 && lat <= 4.9 && lng >= 6.9 && lng <= 7.1) {
+      return 'Port Harcourt, Rivers State, Nigeria';
+    }
+    
+    // Default for other Nigerian locations
+    return `${lat.toFixed(4)}, ${lng.toFixed(4)} (Nigeria)`;
   };
 
   const MapPreview = () => {

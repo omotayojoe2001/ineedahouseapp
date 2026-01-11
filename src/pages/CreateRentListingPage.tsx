@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Layout from '../components/Layout';
 import EnhancedLocationInput from '../components/EnhancedLocationInput';
 import LocationInputWithMap from '../components/LocationInputWithMap';
-import { ArrowLeft, Upload, X, Home, Building, Store, Calendar, CheckCircle, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Upload, X, Home, Building, Store, Calendar, CheckCircle, Plus, Trash2, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PropertyService } from '../services/propertyService';
 
@@ -238,40 +238,42 @@ const CreateRentListingPage = () => {
       case 1:
         return (
           <div className="space-y-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/70 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Home className="w-8 h-8 text-white" />
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+                <Home className="w-10 h-10 text-white" />
               </div>
-              <h2 className="text-2xl font-bold mb-3 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Property Type for Rent</h2>
-              <p className="text-muted-foreground mb-6">What type of property are you renting out?</p>
+              <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Property Type for Rent</h2>
+              <p className="text-slate-600 text-lg">What type of property are you renting out?</p>
             </div>
             
-            <div className="grid gap-4">
+            <div className="grid gap-6">
               {propertyTypes.map((type) => {
                 const IconComponent = type.icon;
                 return (
                   <button
                     key={type.id}
                     onClick={() => setPropertyType(type.id)}
-                    className={`p-6 border-2 rounded-2xl text-left transition-all duration-300 hover:shadow-lg ${
+                    className={`group p-8 border-2 rounded-2xl text-left transition-all duration-300 hover:shadow-2xl transform hover:scale-[1.02] ${
                       propertyType === type.id 
-                        ? 'border-primary bg-gradient-to-r from-primary/10 to-primary/5 shadow-lg' 
-                        : 'border-border hover:border-primary/30 hover:bg-primary/5'
+                        ? 'border-blue-500 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 shadow-xl scale-[1.02]' 
+                        : 'border-slate-200 hover:border-blue-300 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50'
                     }`}
                   >
-                    <div className="flex items-start gap-4">
-                      <div className={`p-3 rounded-xl ${
-                        propertyType === type.id ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
+                    <div className="flex items-start gap-6">
+                      <div className={`p-4 rounded-2xl transition-all duration-300 ${
+                        propertyType === type.id 
+                          ? 'bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg' 
+                          : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 group-hover:from-blue-100 group-hover:to-indigo-100 group-hover:text-blue-600'
                       }`}>
-                        <IconComponent size={24} />
+                        <IconComponent size={28} />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-2">{type.label}</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">{type.description}</p>
+                        <h3 className="font-bold text-xl mb-3 text-slate-800">{type.label}</h3>
+                        <p className="text-slate-600 leading-relaxed">{type.description}</p>
                       </div>
                       {propertyType === type.id && (
-                        <div className="text-primary">
-                          <CheckCircle size={24} />
+                        <div className="text-blue-500">
+                          <CheckCircle size={28} className="drop-shadow-sm" />
                         </div>
                       )}
                     </div>
@@ -285,29 +287,29 @@ const CreateRentListingPage = () => {
       case 2:
         return (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-bold mb-2">Property Details & Location</h2>
-              <p className="text-muted-foreground mb-4">Tell us about your rental property</p>
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold mb-3 text-slate-800">Property Details & Location</h2>
+              <p className="text-slate-600 text-lg">Tell us about your rental property</p>
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">Property Title</label>
+            <div className="space-y-8">
+              <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 rounded-2xl border border-slate-200">
+                <label className="block text-sm font-semibold mb-3 text-slate-700">Property Title</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg"
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 text-slate-800 font-medium"
                   placeholder="e.g., Modern 3-Bedroom Apartment for Rent in Lekki"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Specific Property Type</label>
+              <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 rounded-2xl border border-slate-200">
+                <label className="block text-sm font-semibold mb-3 text-slate-700">Specific Property Type</label>
                 <select
                   value={formData.propertySubType}
                   onChange={(e) => handleInputChange('propertySubType', e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg"
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 text-slate-800 font-medium"
                 >
                   <option value="">Select specific type</option>
                   {propertyType && propertySubTypes[propertyType as keyof typeof propertySubTypes]?.map(type => (
@@ -317,15 +319,18 @@ const CreateRentListingPage = () => {
               </div>
 
               {/* Room Details */}
-              <div className="bg-white p-4 rounded-lg border">
-                <h3 className="font-semibold mb-3">Room Configuration</h3>
-                <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white p-6 rounded-2xl border-2 border-slate-200 shadow-sm">
+                <h3 className="font-bold text-lg mb-4 text-slate-800 flex items-center gap-2">
+                  <Home size={20} className="text-blue-500" />
+                  Room Configuration
+                </h3>
+                <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Bedrooms</label>
+                    <label className="block text-sm font-semibold mb-2 text-slate-700">Bedrooms</label>
                     <select
                       value={formData.bedrooms}
                       onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      className="w-full px-3 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200"
                     >
                       <option value="">Select</option>
                       {[1,2,3,4,5,6].map(num => (
@@ -334,11 +339,11 @@ const CreateRentListingPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Bathrooms</label>
+                    <label className="block text-sm font-semibold mb-2 text-slate-700">Bathrooms</label>
                     <select
                       value={formData.bathrooms}
                       onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      className="w-full px-3 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200"
                     >
                       <option value="">Select</option>
                       {[1,2,3,4,5,6].map(num => (
@@ -347,11 +352,11 @@ const CreateRentListingPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Guest Toilet</label>
+                    <label className="block text-sm font-semibold mb-2 text-slate-700">Guest Toilet</label>
                     <select
                       value={formData.guestToilet}
                       onChange={(e) => handleInputChange('guestToilet', e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      className="w-full px-3 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200"
                     >
                       <option value="">Select</option>
                       <option value="yes">Yes</option>
@@ -362,13 +367,16 @@ const CreateRentListingPage = () => {
               </div>
 
               {/* Location Details */}
-              <div className="bg-white p-4 rounded-lg border">
-                <h3 className="font-semibold mb-3">Location Details</h3>
-                <div className="space-y-4">
+              <div className="bg-white p-6 rounded-2xl border-2 border-slate-200 shadow-sm">
+                <h3 className="font-bold text-lg mb-4 text-slate-800 flex items-center gap-2">
+                  <MapPin size={20} className="text-blue-500" />
+                  Location Details
+                </h3>
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Street Address (with auto-complete)</label>
+                    <label className="block text-sm font-semibold mb-3 text-slate-700">Street Address (with auto-complete)</label>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Property Location</label>
+                    <label className="block text-sm font-semibold mb-3 text-slate-700">Property Location</label>
                     <LocationInputWithMap
                       value={formData.locationData.detailedAddress}
                       onChange={(address) => setFormData(prev => ({
@@ -382,11 +390,11 @@ const CreateRentListingPage = () => {
                       placeholder="Enter your property address or get current location"
                     />
                   </div>
-                    <p className="text-xs text-gray-500 mt-1">💡 This auto-fills from your selection above</p>
+                    <p className="text-xs text-slate-500 mt-2 bg-blue-50 p-2 rounded-lg">💡 This auto-fills from your selection above</p>
                   </div>
                   
-                  <div className="border-t pt-4">
-                    <p className="text-sm text-gray-600 mb-3">Additional location details (optional):</p>
+                  <div className="border-t-2 border-slate-100 pt-6">
+                    <p className="text-sm text-slate-600 mb-4 font-medium">Additional location details (optional):</p>
                     <EnhancedLocationInput
                       onLocationChange={handleLocationChange}
                       initialData={formData.locationData}
@@ -395,12 +403,12 @@ const CreateRentListingPage = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Description</label>
+              <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 rounded-2xl border border-slate-200">
+                <label className="block text-sm font-semibold mb-3 text-slate-700">Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg h-24"
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl h-32 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 resize-none"
                   placeholder="Describe your rental property..."
                 />
               </div>
@@ -1100,49 +1108,67 @@ const CreateRentListingPage = () => {
 
   return (
     <Layout activeTab="upload">
-      <div className="bg-background min-h-screen desktop-nav-spacing">
-        <div className="px-4 pt-4 pb-6 border-b border-border bg-gradient-to-r from-primary/5 to-primary/10">
-          <div className="flex items-center gap-3 mb-4">
-            <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/80 rounded-lg transition-colors">
-              <ArrowLeft size={20} className="text-primary" />
-            </button>
-            <div>
-              <h1 className="text-xl font-bold text-primary">List Property for Rent</h1>
-              <p className="text-sm text-muted-foreground">Step {currentStep} of 4 • Create your rental listing</p>
+      <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50 min-h-screen desktop-nav-spacing">
+        {/* Enhanced Header */}
+        <div className="px-4 pt-6 pb-8 border-b border-slate-200 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white relative overflow-hidden">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-4 mb-6">
+              <button 
+                onClick={() => navigate(-1)} 
+                className="p-3 hover:bg-white/20 rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/20"
+              >
+                <ArrowLeft size={20} className="text-white" />
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold text-white mb-1">List Property for Rent</h1>
+                <p className="text-blue-100">Step {currentStep} of 4 • Create your rental listing</p>
+              </div>
+            </div>
+            
+            {/* Enhanced Progress Bar */}
+            <div className="w-full bg-white/20 rounded-full h-4 overflow-hidden backdrop-blur-sm">
+              <div 
+                className="bg-gradient-to-r from-yellow-400 to-orange-400 h-4 rounded-full transition-all duration-700 ease-out shadow-lg"
+                style={{ width: `${(currentStep / 4) * 100}%` }}
+              />
             </div>
           </div>
-          
-          <div className="w-full bg-white/50 rounded-full h-3 overflow-hidden">
-            <div 
-              className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${(currentStep / 4) * 100}%` }}
-            />
+        </div>
+
+        {/* Enhanced Content Area */}
+        <div className="px-4 py-8 pb-32">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+              <div className="p-8">
+                {renderStep()}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="px-4 py-6 pb-32 bg-gradient-to-b from-background to-muted/30">
-          <div className="max-w-2xl mx-auto">
-            {renderStep()}
-          </div>
-        </div>
-
-        <div className="fixed bottom-20 lg:bottom-6 left-0 right-0 px-4 bg-white/95 backdrop-blur-sm border-t border-border py-4 z-50 shadow-lg">
-          <div className="max-w-2xl mx-auto flex gap-3">
-            {currentStep > 1 && (
-              <button
-                onClick={handleBack}
-                className="flex-1 py-3 border border-border rounded-xl font-medium hover:bg-muted transition-colors"
-              >
-                Back
-              </button>
-            )}
-            <button
-              onClick={currentStep === 4 ? handleSubmit : handleNext}
-              disabled={currentStep === 1 && !propertyType}
-              className="flex-1 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl font-medium disabled:opacity-50 shadow-lg hover:shadow-xl transition-all"
-            >
-              {currentStep === 4 ? 'Publish Rental ✨' : 'Continue'}
-            </button>
+        {/* Enhanced Fixed Footer */}
+        <div className="fixed bottom-20 lg:bottom-6 left-0 right-0 px-4 z-50">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl p-4">
+              <div className="flex gap-4">
+                {currentStep > 1 && (
+                  <button
+                    onClick={handleBack}
+                    className="flex-1 py-4 px-6 border-2 border-slate-300 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 shadow-sm"
+                  >
+                    ← Back
+                  </button>
+                )}
+                <button
+                  onClick={currentStep === 4 ? handleSubmit : handleNext}
+                  disabled={currentStep === 1 && !propertyType}
+                  className="flex-1 py-4 px-6 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-xl font-semibold disabled:opacity-50 shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-[1.02] disabled:hover:scale-100"
+                >
+                  {currentStep === 4 ? '🚀 Publish Rental' : 'Continue →'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
