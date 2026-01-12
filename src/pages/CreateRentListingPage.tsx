@@ -1,17 +1,156 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import EnhancedLocationInput from '../components/EnhancedLocationInput';
 import LocationInputWithMap from '../components/LocationInputWithMap';
 import { ArrowLeft, Upload, X, Home, Building, Store, Calendar, CheckCircle, Plus, Trash2, MapPin } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PropertyService } from '../services/propertyService';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const CreateRentListingPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [propertyType, setPropertyType] = useState('');
   const [images, setImages] = useState<File[]>([]);
+  const [loading, setLoading] = useState(!!editId);
   
+  useEffect(() => {
+    if (editId) {
+      const fetchProperty = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('properties')
+            .select('*')
+            .eq('id', editId)
+            .single();
+
+          if (error) throw error;
+
+          console.log('Loaded property data:', data);
+
+          // Convert existing images from base64 to File objects for preview
+          const existingImages: File[] = [];
+          if (data.images && Array.isArray(data.images)) {
+            for (let i = 0; i < data.images.length; i++) {
+              try {
+                const base64 = data.images[i];
+                const response = await fetch(base64);
+                const blob = await response.blob();
+                const file = new File([blob], `existing-image-${i}.jpg`, { type: 'image/jpeg' });
+                existingImages.push(file);
+              } catch (err) {
+                console.error('Error converting image:', err);
+              }
+            }
+          }
+          setImages(existingImages);
+
+          // Pre-fill form with existing data
+          setFormData({
+            title: data.title || '',
+            description: data.description || '',
+            propertySubType: data.property_type || '',
+            bedrooms: data.bedrooms?.toString() || '',
+            bathrooms: data.bathrooms?.toString() || '',
+            guestToilet: data.guest_toilet ? 'yes' : 'no',
+            totalRooms: data.total_rooms?.toString() || '',
+            sqft: data.area_sqm?.toString() || '',
+            locationData: {
+              stateId: data.state_id || '',
+              cityId: data.city_id || '',
+              areaId: data.area_id || '',
+              streetId: data.street_id || '',
+              detailedAddress: data.address || '',
+              landmarks: data.nearby_landmarks || ''
+            },
+            rentType: data.rent_type || 'monthly',
+            rentAmount: data.price?.toString() || data.annual_rent?.toString() || '',
+            serviceCharge: data.service_charge?.toString() || '',
+            securityDeposit: data.security_deposit?.toString() || '',
+            agreementCommission: data.agreement_fee?.toString() || '',
+            legalAgency: data.legal_fee?.toString() || '',
+            otherFees: data.other_fees || [],
+            floorLevel: data.floor_level === 0 ? 'ground' : data.floor_level === 1 ? '1st' : data.floor_level === 2 ? '2nd' : data.floor_level === 3 ? '3rd' : '4th+',
+            totalUnitsInBuilding: data.total_units_in_building?.toString() || '',
+            buildingCondition: data.building_condition || '',
+            gatedCompound: data.gated_compound ? 'yes' : 'no',
+            security24_7: data.security_personnel ? 'yes' : 'no',
+            cctv: data.cctv_surveillance ? 'full-coverage' : 'none',
+            parkingSpaces: data.parking_spaces?.toString() || '',
+            popCeiling: data.pop_ceiling ? 'yes' : 'no',
+            tiledFloors: data.tiled_floors ? 'yes' : 'no',
+            certificateOfOccupancy: data.certificate_of_occupancy ? 'available' : 'not-available',
+            deedOfAssignment: data.deed_of_assignment ? 'available' : 'not-available',
+            buildingPlan: data.approved_building_plan ? 'approved' : 'not-available',
+            leaseDuration: data.lease_terms || '',
+            availableFrom: data.available_from || '',
+            allowsPets: data.allows_pets || '',
+            tenantPreference: data.tenant_preference || '',
+            // Step 3 fields - Interior Features (FIXED)
+            livingRoom: data.living_room || '',
+            diningArea: data.dining_area || '',
+            kitchenCabinets: data.kitchen_cabinets || '',
+            countertop: data.countertop || '',
+            heatExtractor: data.heat_extractor || '',
+            balcony: data.balcony_feature || '',
+            storage: data.storage || '',
+            // Utilities & Infrastructure (FIXED)
+            electricityType: data.electricity_type || '',
+            transformer: data.transformer || '',
+            generator: data.generator_type || '',
+            waterSupply: data.water_supply || '',
+            borehole: data.borehole || '',
+            treatedWater: data.treated_water || '',
+            internetReady: data.internet_ready || '',
+            wasteManagement: data.waste_management || '',
+            accessControl: data.access_control || '',
+            visitorParking: data.visitor_parking || '',
+            sanitaryFittings: data.sanitary_fittings || '',
+            paintCondition: data.paint_condition || '',
+            cautionFee: data.caution_fee?.toString() || '',
+            agencyFee: data.agency_fee?.toString() || '',
+            inspectionFee: data.inspection_fee?.toString() || '',
+            furnished: data.furnished ? 'yes' : 'no',
+            amenities: {
+              gym: data.gym || false,
+              kitchen: data.kitchen || false,
+              ac: data.air_conditioning || false,
+              generator: data.backup_generator || false,
+              furniture: data.furnished || false,
+              elevator: data.elevator || false,
+              balcony: data.balcony_amenity || false,
+              parking: data.parking || false,
+              water: data.borehole || data.treated_water || false,
+              internet: data.internet || data.fiber_ready || false,
+              security: data.security_personnel || false,
+              garden: data.garden || false,
+              pool: data.swimming_pool || false,
+              cctv: data.cctv_surveillance || false
+            }
+          });
+
+          // Set property type based on category
+          if (data.category === 'rent') setPropertyType('house');
+          else if (data.category === 'commercial') setPropertyType('commercial');
+          else if (data.category === 'shop') setPropertyType('shop');
+          else if (data.category === 'event_center') setPropertyType('event');
+
+        } catch (error) {
+          console.error('Error fetching property:', error);
+          toast({ title: 'Error', description: 'Failed to load property data', variant: 'destructive' });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchProperty();
+    }
+  }, [editId, toast]);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -84,6 +223,7 @@ const CreateRentListingPage = () => {
     leaseDuration: '',
     availableFrom: '',
     allowsPets: '',
+    tenantPreference: '',
     furnished: '',
     // Combined fees
     agreementCommission: '',
@@ -129,9 +269,10 @@ const CreateRentListingPage = () => {
     setFormData(prev => ({ ...prev, locationData }));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newImages = Array.from(e.target.files);
+      console.log('Files selected:', newImages.length);
       setImages(prev => [...prev, ...newImages].slice(0, 10));
     }
   };
@@ -181,6 +322,32 @@ const CreateRentListingPage = () => {
         legal_fee: parseFloat(formData.legalAgency) || 0,
         other_fees: formData.otherFees || [],
         
+        // Step 3 fields - Interior Features
+        living_room: formData.livingRoom,
+        dining_area: formData.diningArea,
+        kitchen_cabinets: formData.kitchenCabinets,
+        countertop: formData.countertop,
+        heat_extractor: formData.heatExtractor,
+        balcony_feature: formData.balcony,
+        storage: formData.storage,
+        
+        // Utilities & Infrastructure
+        electricity_type: formData.electricityType,
+        transformer: formData.transformer,
+        generator_type: formData.generator,
+        water_supply: formData.waterSupply,
+        borehole: formData.borehole || null,
+        treated_water: formData.treatedWater || null,
+        internet_ready: formData.internetReady,
+        waste_management: formData.wasteManagement || null,
+        access_control: formData.accessControl || null,
+        visitor_parking: formData.visitorParking || null,
+        sanitary_fittings: formData.sanitaryFittings || null,
+        paint_condition: formData.paintCondition || null,
+        caution_fee: parseFloat(formData.cautionFee) || 0,
+        agency_fee: parseFloat(formData.agencyFee) || 0,
+        inspection_fee: parseFloat(formData.inspectionFee) || 0,
+        
         // Building details
         floor_level: formData.floorLevel === 'ground' ? 0 : 
                     formData.floorLevel === '1st' ? 1 :
@@ -216,13 +383,31 @@ const CreateRentListingPage = () => {
         // Lease terms
         available_from: formData.availableFrom,
         lease_terms: formData.leaseDuration,
+        allows_pets: formData.allowsPets,
+        tenant_preference: formData.tenantPreference,
         
-        // Convert images to base64 for storage
+        // Convert images to base64 for storage with compression
         images: await Promise.all(images.map(async (img) => {
-          return new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(img);
+          return new Promise<string>((resolve, reject) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const image = new Image();
+            
+            image.onload = () => {
+              // Resize to max 800px width
+              const maxWidth = 800;
+              const ratio = Math.min(maxWidth / image.width, maxWidth / image.height);
+              canvas.width = image.width * ratio;
+              canvas.height = image.height * ratio;
+              
+              ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
+              const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+              console.log('Compressed image size:', compressedBase64.length);
+              resolve(compressedBase64);
+            };
+            
+            image.onerror = () => reject(new Error('Failed to load image'));
+            image.src = URL.createObjectURL(img);
           });
         })),
         
@@ -230,8 +415,55 @@ const CreateRentListingPage = () => {
       };
 
       console.log('Property data being sent:', propertyData);
-      await PropertyService.createProperty(propertyData);
-      alert('Rent listing created successfully!');
+      
+      // Debug: Check for empty strings that might cause boolean errors
+      const booleanFields = ['gated_compound', 'security_personnel', 'cctv_surveillance', 'pop_ceiling', 'tiled_floors', 'certificate_of_occupancy', 'deed_of_assignment', 'approved_building_plan', 'gym', 'air_conditioning', 'parking', 'swimming_pool', 'garden', 'elevator', 'furnished'];
+      const emptyStringFields = [];
+      
+      Object.keys(propertyData).forEach(key => {
+        if (propertyData[key] === '') {
+          emptyStringFields.push(key);
+        }
+      });
+      
+      console.log('🚨 Empty string fields that might cause errors:', emptyStringFields);
+      console.log('🔍 Boolean fields in data:', booleanFields.filter(field => propertyData.hasOwnProperty(field)));
+      
+      // Convert ALL empty strings to null to prevent boolean errors
+      Object.keys(propertyData).forEach(key => {
+        if (propertyData[key] === '') {
+          console.log(`Converting empty string to null: ${key}`);
+          propertyData[key] = null;
+        }
+      });
+      
+      console.log('✅ Cleaned property data:', propertyData);
+      
+      if (editId) {
+        // Update existing property - add debugging
+        console.log('Updating property with ID:', editId);
+        console.log('Update data:', propertyData);
+        
+        const { data: updateResult, error } = await supabase
+          .from('properties')
+          .update(propertyData)
+          .eq('id', editId)
+          .select();
+        
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
+        
+        console.log('Update successful:', updateResult);
+        toast({ title: 'Success', description: 'Listing updated successfully!' });
+      } else {
+        // Create new property
+        console.log('Creating new property:', propertyData);
+        const result = await PropertyService.createProperty(propertyData);
+        console.log('Create result:', result);
+        toast({ title: 'Success', description: 'Rent listing created successfully!' });
+      }
       navigate('/my-listings');
     } catch (error) {
       console.error('Error creating listing:', error);
@@ -245,10 +477,10 @@ const CreateRentListingPage = () => {
         return (
           <div className="space-y-8">
             <div className="text-center mb-8">
-              <div className="w-20 h-20 bg-blue-500 rounded-lg flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <div className="w-20 h-20 bg-green-500 rounded-lg flex items-center justify-center mx-auto mb-6 shadow-lg">
                 <Home className="w-10 h-10 text-white" />
               </div>
-              <h2 className="text-3xl font-bold mb-4 text-blue-600">Property Type for Rent</h2>
+              <h2 className="text-3xl font-bold mb-4 text-green-600">Property Type for Rent</h2>
               <p className="text-gray-600 text-lg">What type of property are you renting out?</p>
             </div>
             
@@ -261,15 +493,15 @@ const CreateRentListingPage = () => {
                     onClick={() => setPropertyType(type.id)}
                     className={`group p-8 border-2 rounded-lg text-left transition-all hover:shadow-lg ${
                       propertyType === type.id 
-                        ? 'border-blue-500 bg-blue-50 shadow-lg' 
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                        ? 'border-green-500 bg-green-50 shadow-lg' 
+                        : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
                     }`}
                   >
                     <div className="flex items-start gap-6">
                       <div className={`p-4 rounded-lg transition-all ${
                         propertyType === type.id 
-                          ? 'bg-blue-500 text-white shadow-lg' 
-                          : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600'
+                          ? 'bg-green-500 text-white shadow-lg' 
+                          : 'bg-gray-100 text-gray-600 group-hover:bg-green-100 group-hover:text-green-600'
                       }`}>
                         <IconComponent size={28} />
                       </div>
@@ -278,7 +510,7 @@ const CreateRentListingPage = () => {
                         <p className="text-gray-600 leading-relaxed">{type.description}</p>
                       </div>
                       {propertyType === type.id && (
-                        <div className="text-blue-500">
+                        <div className="text-green-500">
                           <CheckCircle size={28} />
                         </div>
                       )}
@@ -305,7 +537,7 @@ const CreateRentListingPage = () => {
                   type="text"
                   value={formData.title}
                   onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-gray-800 font-medium"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all text-gray-800 font-medium"
                   placeholder="e.g., Modern 3-Bedroom Apartment for Rent in Lekki"
                 />
               </div>
@@ -315,7 +547,7 @@ const CreateRentListingPage = () => {
                 <select
                   value={formData.propertySubType}
                   onChange={(e) => handleInputChange('propertySubType', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-gray-800 font-medium"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all text-gray-800 font-medium"
                 >
                   <option value="">Select specific type</option>
                   {propertyType && propertySubTypes[propertyType as keyof typeof propertySubTypes]?.map(type => (
@@ -327,7 +559,7 @@ const CreateRentListingPage = () => {
               {/* Room Details */}
               <div className="bg-white p-6 rounded-lg border-2 border-gray-200 shadow-sm">
                 <h3 className="font-bold text-lg mb-4 text-gray-800 flex items-center gap-2">
-                  <Home size={20} className="text-blue-500" />
+                  <Home size={20} className="text-green-500" />
                   Room Configuration
                 </h3>
                 <div className="grid grid-cols-3 gap-4">
@@ -336,7 +568,7 @@ const CreateRentListingPage = () => {
                     <select
                       value={formData.bedrooms}
                       onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                      className="w-full px-3 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                      className="w-full px-3 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
                     >
                       <option value="">Select</option>
                       {[1,2,3,4,5,6].map(num => (
@@ -375,7 +607,7 @@ const CreateRentListingPage = () => {
               {/* Location Details */}
               <div className="bg-white p-6 rounded-lg border-2 border-gray-200 shadow-sm">
                 <h3 className="font-bold text-lg mb-4 text-gray-800 flex items-center gap-2">
-                  <MapPin size={20} className="text-blue-500" />
+                  <MapPin size={20} className="text-green-500" />
                   Location Details
                 </h3>
                 <div className="space-y-6">
@@ -396,8 +628,8 @@ const CreateRentListingPage = () => {
                       placeholder="Enter your property address or get current location"
                     />
                   </div>
-                    <p className="text-xs text-gray-500 mt-2 bg-blue-50 p-2 rounded-lg flex items-center gap-1">
-                      <MapPin size={12} className="text-blue-500" />
+                    <p className="text-xs text-gray-500 mt-2 bg-green-50 p-2 rounded-lg flex items-center gap-1">
+                      <MapPin size={12} className="text-green-500" />
                       This auto-fills from your selection above
                     </p>
                   </div>
@@ -417,7 +649,7 @@ const CreateRentListingPage = () => {
                 <textarea
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg h-32 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg h-32 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all resize-none"
                   placeholder="Describe your rental property..."
                 />
               </div>
@@ -460,6 +692,7 @@ const CreateRentListingPage = () => {
                           src={URL.createObjectURL(image)}
                           alt={`Upload ${index + 1}`}
                           className="w-full h-20 object-cover rounded-lg"
+                          onLoad={() => console.log('Image preview loaded for index:', index)}
                         />
                         <button
                           onClick={() => removeImage(index)}
@@ -1106,6 +1339,42 @@ const CreateRentListingPage = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Tenant Preferences */}
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold mb-3">Tenant Preferences</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Allow Pets?</label>
+                    <select
+                      value={formData.allowsPets}
+                      onChange={(e) => handleInputChange('allowsPets', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                    >
+                      <option value="">Choose</option>
+                      <option value="yes">Yes, pets allowed</option>
+                      <option value="no">No pets</option>
+                      <option value="small-pets">Only small pets</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Preferred Tenant Type</label>
+                    <select
+                      value={formData.tenantPreference}
+                      onChange={(e) => handleInputChange('tenantPreference', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                    >
+                      <option value="">No preference</option>
+                      <option value="single">Single person only</option>
+                      <option value="couple">Couple only</option>
+                      <option value="small-family">Small family (2-3 people)</option>
+                      <option value="large-family">Large family (4-5 people)</option>
+                      <option value="professionals">Working professionals</option>
+                      <option value="students">Students</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -1119,24 +1388,24 @@ const CreateRentListingPage = () => {
     <Layout activeTab="upload">
       <div className="bg-white min-h-screen desktop-nav-spacing">
         {/* Header */}
-        <div className="px-4 pt-6 pb-8 border-b border-gray-200 bg-blue-600 text-white">
+        <div className="px-4 pt-6 pb-8 border-b border-gray-200 bg-green-600 text-white">
           <div className="flex items-center gap-4 mb-6">
             <button 
               onClick={() => navigate(-1)} 
-              className="p-3 hover:bg-blue-700 rounded-lg transition-colors border border-blue-500"
+              className="p-3 hover:bg-green-700 rounded-lg transition-colors border border-green-500"
             >
               <ArrowLeft size={20} className="text-white" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-white mb-1">List Property for Rent</h1>
-              <p className="text-blue-100">Step {currentStep} of 4 - Create your rental listing</p>
+              <h1 className="text-2xl font-bold text-white mb-1">{editId ? 'Edit Property for Rent' : 'List Property for Rent'}</h1>
+              <p className="text-green-100">{editId ? 'Edit your rental listing' : `Step ${currentStep} of 4 - Create your rental listing`}</p>
             </div>
           </div>
           
           {/* Progress Bar */}
-          <div className="w-full bg-blue-700 rounded-full h-4 overflow-hidden">
+          <div className="w-full bg-green-700 rounded-full h-4 overflow-hidden">
             <div 
-              className="bg-orange-400 h-4 rounded-full transition-all duration-500"
+              className="bg-white h-4 rounded-full transition-all duration-500"
               style={{ width: `${(currentStep / 4) * 100}%` }}
             />
           </div>
@@ -1170,10 +1439,10 @@ const CreateRentListingPage = () => {
                 <button
                   onClick={currentStep === 4 ? handleSubmit : handleNext}
                   disabled={currentStep === 1 && !propertyType}
-                  className="flex-1 py-4 px-6 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50 hover:bg-blue-700 transition-colors"
+                  className="flex-1 py-4 px-6 bg-green-600 text-white rounded-lg font-semibold disabled:opacity-50 hover:bg-green-700 transition-colors"
                 >
                   {currentStep === 4 ? (
-                    <><Upload size={16} className="inline mr-2" />Publish Rental</>
+                    <><Upload size={16} className="inline mr-2" />{editId ? 'Update Rental' : 'Publish Rental'}</>
                   ) : (
                     <>Continue<ArrowLeft size={16} className="inline ml-2 rotate-180" /></>
                   )}

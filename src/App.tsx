@@ -47,6 +47,10 @@ import Services from "./pages/Services";
 import Rent from "./pages/Rent";
 import Buy from "./pages/Buy";
 import Land from "./pages/Land";
+import GettingStarted from "./pages/GettingStarted";
+import PropertyListings from "./pages/PropertyListings";
+import AccountManagement from "./pages/AccountManagement";
+import EditListing from "./pages/EditListing";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +97,10 @@ const App = () => (
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/privacy-security" element={<PrivacySecurity />} />
             <Route path="/help-support" element={<HelpSupport />} />
+            <Route path="/getting-started" element={<GettingStarted />} />
+            <Route path="/property-listings" element={<PropertyListings />} />
+            <Route path="/account-management" element={<AccountManagement />} />
+            <Route path="/edit-listing/:id" element={<EditListing />} />
             <Route path="/admin-locations" element={<AdminLocationPage />} />
             <Route path="/diagnostic" element={<DiagnosticPage />} />
             <Route path="/map-search" element={<MapSearchPage />} />

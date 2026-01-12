@@ -23,24 +23,36 @@ const Profile = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
+  const [stats, setStats] = useState({ listings: 0, saved: 0, messages: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchData = async () => {
       if (!user) return;
       
       try {
-        const { data, error } = await supabase
+        // Fetch profile
+        const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', user.id)
           .maybeSingle();
 
-        if (error) {
-          console.error('Error fetching profile:', error);
-        } else {
-          setProfile(data);
-        }
+        console.log('🔍 Profile page - User ID:', user.id);
+        console.log('👤 Profile page - Profile data:', profileData);
+
+        // Fetch stats
+        const [listingsRes, savedRes] = await Promise.all([
+          supabase.from('properties').select('id', { count: 'exact' }).eq('user_id', user.id),
+          supabase.from('property_favorites').select('id', { count: 'exact' }).eq('user_id', user.id)
+        ]);
+
+        setProfile(profileData);
+        setStats({
+          listings: listingsRes.count || 0,
+          saved: savedRes.count || 0,
+          messages: 0 // Placeholder
+        });
       } catch (error) {
         console.error('Error:', error);
       } finally {
@@ -48,7 +60,7 @@ const Profile = () => {
       }
     };
 
-    fetchProfile();
+    fetchData();
   }, [user]);
 
   const handleSignOut = async () => {
@@ -75,56 +87,56 @@ const Profile = () => {
       icon: User,
       title: 'Personal Information',
       description: 'Update your details',
-      color: 'text-blue-500',
+      color: 'text-green-500',
       path: '/personal-info',
     },
     {
       icon: Home,
       title: 'My Listings',
-      description: '5 active properties',
+      description: `${stats.listings} active properties`,
       color: 'text-green-500',
       path: '/my-listings',
     },
     {
       icon: Heart,
       title: 'Saved Properties',
-      description: '12 saved items',
-      color: 'text-red-500',
+      description: `${stats.saved} saved items`,
+      color: 'text-green-500',
       path: '/saved',
     },
     {
       icon: MessageSquare,
       title: 'Messages',
-      description: '3 unread messages',
-      color: 'text-purple-500',
+      description: `${stats.messages} unread messages`,
+      color: 'text-green-500',
       path: '/messages',
     },
     {
       icon: CreditCard,
       title: 'Payment Methods',
       description: 'Manage cards and payments',
-      color: 'text-orange-500',
+      color: 'text-green-500',
       path: '/payment-methods',
     },
     {
       icon: Bell,
       title: 'Notifications',
       description: 'Customize your alerts',
-      color: 'text-yellow-500',
+      color: 'text-green-500',
       path: '/notifications',
     },
     {
       icon: Shield,
       title: 'Privacy & Security',
       description: 'Account security settings',
-      color: 'text-indigo-500',
+      color: 'text-green-500',
       path: '/privacy-security',
     },
     {
       icon: HelpCircle,
       title: 'Help & Support',
       description: 'Get help and contact us',
-      color: 'text-cyan-500',
+      color: 'text-green-500',
       path: '/help-support',
     },
   ];

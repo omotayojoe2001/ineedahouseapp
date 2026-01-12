@@ -151,6 +151,8 @@ export interface ServiceData {
 export class PropertyService {
   static async createProperty(propertyData: PropertyData) {
     try {
+      console.log('Creating property with data:', propertyData);
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
@@ -163,23 +165,12 @@ export class PropertyService {
         .select()
         .single();
 
-      if (propertyError) throw propertyError;
-
-      if (propertyData.images && propertyData.images.length > 0) {
-        const imageInserts = propertyData.images.map((imageUrl, index) => ({
-          property_id: property.id,
-          image_url: imageUrl,
-          is_primary: index === 0,
-          order_index: index,
-        }));
-
-        const { error: imagesError } = await supabase
-          .from('property_images')
-          .insert(imageInserts);
-
-        if (imagesError) throw imagesError;
+      if (propertyError) {
+        console.error('Property creation error:', propertyError);
+        throw propertyError;
       }
 
+      console.log('Property created successfully:', property);
       return property;
     } catch (error) {
       console.error('Error creating property:', error);
@@ -276,8 +267,7 @@ export class PropertyService {
         .from('property_favorites')
         .select(`
           properties!inner(
-            *,
-            property_images(*)
+            *
           )
         `)
         .eq('user_id', user.id);

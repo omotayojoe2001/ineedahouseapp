@@ -115,18 +115,27 @@ const Explore: React.FC = () => {
   };
 
   // Transform database properties to component format
-  const transformProperty = (prop: any) => ({
-    id: prop.id,
-    title: prop.title,
-    price: prop.price,
-    duration: prop.duration || (prop.category === 'rent' ? '/ month' : ' total'),
-    rating: prop.rating || 4.5,
-    imageUrl: prop.property_images?.find((img: any) => img.is_primary)?.image_url || 
-              prop.property_images?.[0]?.image_url || 
-              property1,
-    location: prop.location,
-    badge: prop.featured ? 'Featured' : undefined,
-  });
+  const transformProperty = (prop: any) => {
+    console.log('Property images:', prop.images);
+    console.log('Property property_images:', prop.property_images);
+    console.log('Full property object:', prop);
+    
+    const imageUrl = prop.images?.[0] || 
+                    prop.property_images?.find((img: any) => img.is_primary)?.image_url || 
+                    prop.property_images?.[0]?.image_url ||
+                    '/placeholder.svg'; // Always provide fallback
+    
+    return {
+      id: prop.id,
+      title: prop.title,
+      price: prop.price,
+      duration: prop.duration || (prop.category === 'rent' ? '/ month' : ' total'),
+      rating: prop.rating || 4.5,
+      imageUrl: imageUrl,
+      location: prop.location,
+      badge: prop.featured ? 'Featured' : undefined,
+    };
+  };
 
   const popularLagosProperties = loading ? [] : properties
     .filter(prop => prop.location?.toLowerCase().includes('lagos') && prop.category === 'rent')
@@ -181,19 +190,26 @@ const Explore: React.FC = () => {
   const featuredProperties = loading ? [] : properties
     .filter(prop => prop.featured)
     .slice(0, 2)
-    .map(prop => ({
-      id: prop.id,
-      title: prop.title,
-      location: prop.location,
-      price: prop.price,
-      duration: prop.category === 'rent' ? 'month' as const : 'total' as const,
-      imageUrl: prop.property_images?.find((img: any) => img.is_primary)?.image_url || 
-                prop.property_images?.[0]?.image_url || 
-                property1,
-      rating: prop.rating || 4.5,
-      isSponsored: prop.featured,
-      sponsorName: 'Premium Homes',
-    }));
+    .map(prop => {
+      const imageUrl = prop.images?.[0] || 
+                      prop.property_images?.find((img: any) => img.is_primary)?.image_url || 
+                      prop.property_images?.[0]?.image_url;
+      
+      if (!imageUrl) return null;
+      
+      return {
+        id: prop.id,
+        title: prop.title,
+        location: prop.location,
+        price: prop.price,
+        duration: prop.category === 'rent' ? 'month' as const : 'total' as const,
+        imageUrl: imageUrl,
+        rating: prop.rating || 4.5,
+        isSponsored: prop.featured,
+        sponsorName: 'Premium Homes',
+      };
+    })
+    .filter(Boolean);
 
   const handlePropertyClick = (property: any) => {
     navigate(`/property/${property.id}`);

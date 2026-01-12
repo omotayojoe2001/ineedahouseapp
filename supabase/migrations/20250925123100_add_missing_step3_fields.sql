@@ -1,0 +1,21 @@
+-- Add missing Step 3 fields for comprehensive property data
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS living_room TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS dining_area TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS kitchen_cabinets TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS countertop TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS heat_extractor TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS balcony_feature TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS electricity_type TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS generator_type TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS water_supply TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS internet_ready TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS waste_management TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS access_control TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS visitor_parking TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS sanitary_fittings TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS paint_condition TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS caution_fee DECIMAL(15,2);
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS agency_fee DECIMAL(15,2);
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS inspection_fee DECIMAL(15,2);
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS balcony_amenity BOOLEAN DEFAULT FALSE;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS kitchen BOOLEAN DEFAULT FALSE;

@@ -123,7 +123,7 @@ const Saved = () => {
               <p className="text-muted-foreground">Try adjusting your filters or save some properties!</p>
             </div>
           ) : (
-            <div className={viewMode === 'grid' ? 'grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1' : 'space-y-1'}>
+            <div className={viewMode === 'grid' ? 'grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1' : 'space-y-1'}>
               {filteredProperties.map((property) => (
                 <PropertyCard key={property.id} {...property} />
               ))}

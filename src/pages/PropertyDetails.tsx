@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Share, Heart, MapPin, Star, Phone, MessageCircle, Calendar, Shield, CheckCircle, Car, Waves, Dumbbell, ChefHat, Wifi, Snowflake, Droplets } from 'lucide-react';
+import { ArrowLeft, Share, Heart, MapPin, Star, Phone, MessageCircle, Calendar, Shield, CheckCircle, Car, Waves, Dumbbell, ChefHat, Wifi, Snowflake, Droplets, Building, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -8,11 +8,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { PropertyService } from '@/services/propertyService';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PropertyDetails = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isSaved, setIsSaved] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(1);
   const [property, setProperty] = useState<any>(null);
@@ -24,8 +27,37 @@ const PropertyDetails = () => {
       if (!id) return;
       
       try {
-        const data = await PropertyService.getProperty(id);
-        setProperty(data);
+        const { data: propertyData, error: propertyError } = await supabase
+          .from('properties')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (propertyError) throw propertyError;
+        
+        console.log('🏠 Property data:', propertyData);
+        console.log('👤 Property user_id:', propertyData.user_id);
+        
+        // Fetch owner profile separately
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, full_name, phone, created_at, avatar_url')
+          .eq('user_id', propertyData.user_id)
+          .single();
+        
+        console.log('📋 Profile query error:', profileError);
+        console.log('👤 Profile data:', profileData);
+        
+        if (!profileError && profileData) {
+          propertyData.profiles = profileData;
+          console.log('✅ Profile attached to property');
+        } else {
+          console.log('❌ No profile found or error:', profileError);
+        }
+        
+        console.log('🎯 Final property with profile:', propertyData);
+        
+        setProperty(propertyData);
       } catch (error) {
         console.error('Error fetching property:', error);
         toast({
@@ -84,29 +116,35 @@ const PropertyDetails = () => {
     );
   }
 
-  const propertyImages = property.property_images?.map((img: any) => img.image_url) || [
+  const propertyImages = property.images || property.property_images?.map((img: any) => img.image_url) || [
     '/src/assets/property-1.jpg',
     '/src/assets/property-2.jpg',
   ];
 
-  const amenities = [
-    { icon: Car, label: 'Parking' },
-    { icon: Waves, label: 'Pool' },
-    { icon: Dumbbell, label: 'Gym' },
-    { icon: Shield, label: 'Security' },
-    { icon: ChefHat, label: 'Kitchen' },
-    { icon: Wifi, label: 'WiFi' },
-    { icon: Snowflake, label: 'AC' },
-    { icon: Droplets, label: 'Water' },
-    { icon: Shield, label: 'Generator' },
-    { icon: Car, label: 'Elevator' },
-    { icon: Waves, label: 'Garden' },
-    { icon: Dumbbell, label: 'Balcony' },
-    { icon: ChefHat, label: 'Furnished' },
-    { icon: Wifi, label: 'Internet' },
-    { icon: Snowflake, label: 'Heating' },
-    { icon: Droplets, label: 'Pet Friendly' },
-  ];
+  const getAmenities = () => {
+    const amenityList = [];
+    if (property.parking) amenityList.push({ icon: Car, label: 'Parking' });
+    if (property.swimming_pool) amenityList.push({ icon: Waves, label: 'Pool' });
+    if (property.gym) amenityList.push({ icon: Dumbbell, label: 'Gym' });
+    if (property.security_personnel) amenityList.push({ icon: Shield, label: 'Security' });
+    if (property.air_conditioning) amenityList.push({ icon: Snowflake, label: 'AC' });
+    if (property.furnished) amenityList.push({ icon: ChefHat, label: 'Furnished' });
+    if (property.elevator) amenityList.push({ icon: Car, label: 'Elevator' });
+    if (property.garden) amenityList.push({ icon: Waves, label: 'Garden' });
+    if (property.internet || property.fiber_ready) amenityList.push({ icon: Wifi, label: 'WiFi' });
+    if (property.backup_generator) amenityList.push({ icon: Shield, label: 'Generator' });
+    if (property.borehole || property.treated_water) amenityList.push({ icon: Droplets, label: 'Water' });
+    if (property.cctv_surveillance) amenityList.push({ icon: Shield, label: 'CCTV' });
+    
+    return amenityList.length > 0 ? amenityList : [
+      { icon: Car, label: 'Parking' },
+      { icon: Shield, label: 'Security' },
+      { icon: ChefHat, label: 'Kitchen' },
+      { icon: Wifi, label: 'WiFi' },
+    ];
+  };
+
+  const amenities = getAmenities();
 
   const reviews = [
     {
@@ -190,8 +228,11 @@ const PropertyDetails = () => {
           <h1 className="text-2xl font-bold text-foreground">{property.title}</h1>
           <div className="flex items-center gap-1 text-muted-foreground mt-1">
             <MapPin className="h-4 w-4" />
-            <span>{property.location}</span>
+            <span>{property.address || property.location}</span>
           </div>
+          {property.description && (
+            <p className="text-muted-foreground mt-2">{property.description}</p>
+          )}
         </div>
 
         {/* Quick Summary */}
@@ -217,12 +258,12 @@ const PropertyDetails = () => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1">
             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-            <span className="font-medium">4.8</span>
-            <span className="text-muted-foreground">(124 reviews)</span>
+            <span className="font-medium">{property.rating || '4.8'}</span>
+            <span className="text-muted-foreground">({property.review_count || '0'} reviews)</span>
           </div>
           <Badge variant="secondary" className="bg-green-50 text-green-700">
             <CheckCircle className="h-3 w-3 mr-1" />
-            Verified
+            {property.verified ? 'Verified' : 'Listed'}
           </Badge>
         </div>
 
@@ -234,33 +275,47 @@ const PropertyDetails = () => {
 
       {/* Owner/Agent Section */}
       <div className="p-4 border-t border-border">
-        <h2 className="text-lg font-semibold mb-3">Hosted by David Okafor</h2>
+        <h2 className="text-lg font-semibold mb-3">Hosted by {property.profiles ? `${property.profiles.first_name} ${property.profiles.last_name}` : 'Property Owner'}</h2>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12">
-              <AvatarImage src="" />
-              <AvatarFallback>DO</AvatarFallback>
+              <AvatarImage src={property.profiles?.avatar_url || ''} className="object-cover" />
+              <AvatarFallback>
+                {property.profiles ? 
+                  `${property.profiles.first_name?.[0] || ''}${property.profiles.last_name?.[0] || ''}`.toUpperCase() : 
+                  'PO'
+                }
+              </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-medium">David Okafor</p>
-              <div className="flex items-center gap-2">
+              <p className="font-medium">{property.profiles ? `${property.profiles.first_name} ${property.profiles.last_name}` : 'Property Owner'}</p>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-1">
+                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                  <span className="text-xs font-medium">4.9</span>
+                </div>
                 <Badge variant="outline" className="text-xs">
                   <Shield className="h-3 w-3 mr-1" />
-                  Verified Agent
+                  Verified Host
                 </Badge>
-                <span className="text-xs text-muted-foreground">3 years hosting</span>
+                <span className="text-xs text-muted-foreground">
+                  Member since {property.profiles?.created_at ? new Date(property.profiles.created_at).getFullYear() : '2024'}
+                </span>
               </div>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => navigate('/messages')}>
               <MessageCircle className="h-4 w-4 mr-1" />
               Message
             </Button>
-            <Button variant="outline" size="sm">
-              <Phone className="h-4 w-4 mr-1" />
-              Call
-            </Button>
+            {property.profiles?.phone && (
+              <Button variant="outline" size="sm" onClick={() => window.open(`tel:${property.profiles.phone}`)}>
+                <Phone className="h-4 w-4 mr-1" />
+                Call
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -285,6 +340,300 @@ const PropertyDetails = () => {
             {showAllAmenities ? 'Show less amenities' : `Show all ${amenities.length} amenities`}
           </Button>
         )}
+      </div>
+
+      {/* Property Features & Details */}
+      <div className="p-4 border-t border-border">
+        <h2 className="text-lg font-semibold mb-4">Property Details</h2>
+        
+        {/* Building Information */}
+        {(property.floor_level !== undefined || property.total_units_in_building) && (
+          <div className="mb-6">
+            <h3 className="font-semibold text-base mb-3">Building Information</h3>
+            <div className="space-y-3 text-sm">
+              {property.floor_level !== undefined && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Building className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Floor Level</span>
+                  </div>
+                  <span className="text-gray-600">{property.floor_level === 0 ? 'Ground floor' : `${property.floor_level}${property.floor_level === 1 ? 'st' : property.floor_level === 2 ? 'nd' : property.floor_level === 3 ? 'rd' : 'th'} floor`}</span>
+                </div>
+              )}
+              {property.total_units_in_building && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Home className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Units in Building</span>
+                  </div>
+                  <span className="text-gray-600">{property.total_units_in_building}</span>
+                </div>
+              )}
+              {property.building_condition && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Building Condition</span>
+                  </div>
+                  <span className="text-gray-600 capitalize">{property.building_condition.replace('-', ' ')}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Interior Features */}
+        {(property.living_room || property.dining_area || property.kitchen_cabinets) && (
+          <div className="mb-6">
+            <h3 className="font-semibold text-base mb-3">Interior Features</h3>
+            <div className="space-y-3 text-sm">
+              {property.living_room && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Home className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Living Room</span>
+                  </div>
+                  <span className="text-gray-600 capitalize">{property.living_room}</span>
+                </div>
+              )}
+              {property.dining_area && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <ChefHat className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Dining Area</span>
+                  </div>
+                  <span className="text-gray-600 capitalize">{property.dining_area}</span>
+                </div>
+              )}
+              {property.kitchen_cabinets && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <ChefHat className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Kitchen Cabinets</span>
+                  </div>
+                  <span className="text-gray-600 capitalize">{property.kitchen_cabinets}</span>
+                </div>
+              )}
+              {property.countertop && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Building className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Kitchen Counter</span>
+                  </div>
+                  <span className="text-gray-600 capitalize">{property.countertop}</span>
+                </div>
+              )}
+              {property.heat_extractor && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Snowflake className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Kitchen Extractor</span>
+                  </div>
+                  <span className="text-gray-600 capitalize">{property.heat_extractor}</span>
+                </div>
+              )}
+              {property.balcony_feature && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Home className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Balcony</span>
+                  </div>
+                  <span className="text-gray-600 capitalize">{property.balcony_feature}</span>
+                </div>
+              )}
+              {property.storage && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Building className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Storage</span>
+                  </div>
+                  <span className="text-gray-600 capitalize">{property.storage.replace('-', ' ')}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Security & Parking */}
+        {(property.gated_compound || property.security_personnel || property.parking_spaces) && (
+          <div className="mb-6">
+            <h3 className="font-semibold text-base mb-3">Security & Parking</h3>
+            <div className="space-y-3 text-sm">
+              {property.gated_compound && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Gated Compound</span>
+                  </div>
+                  <span className="text-gray-600">Yes</span>
+                </div>
+              )}
+              {property.security_personnel && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Security Guard</span>
+                  </div>
+                  <span className="text-gray-600">24/7 Security</span>
+                </div>
+              )}
+              {property.cctv_surveillance && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">CCTV</span>
+                  </div>
+                  <span className="text-gray-600">Yes</span>
+                </div>
+              )}
+              {property.parking_spaces && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Car className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Parking Spaces</span>
+                  </div>
+                  <span className="text-gray-600">{property.parking_spaces}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Utilities */}
+        {(property.electricity_type || property.water_supply || property.internet_ready) && (
+          <div className="mb-6">
+            <h3 className="font-semibold text-base mb-3">Utilities & Services</h3>
+            <div className="space-y-3 text-sm">
+              {property.electricity_type && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Wifi className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Electricity</span>
+                  </div>
+                  <span className="text-gray-600 capitalize">{property.electricity_type === 'public' ? 'NEPA/PHCN' : property.electricity_type}</span>
+                </div>
+              )}
+              {property.transformer && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Wifi className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Transformer</span>
+                  </div>
+                  <span className="text-gray-600 capitalize">{property.transformer}</span>
+                </div>
+              )}
+              {property.generator_type && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Generator</span>
+                  </div>
+                  <span className="text-gray-600 capitalize">{property.generator_type.replace('-', ' ')}</span>
+                </div>
+              )}
+              {property.water_supply && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Droplets className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Water Supply</span>
+                  </div>
+                  <span className="text-gray-600 capitalize">{property.water_supply}</span>
+                </div>
+              )}
+              {property.internet_ready && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Wifi className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Internet</span>
+                  </div>
+                  <span className="text-gray-600 capitalize">{property.internet_ready.replace('-', ' ')}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* House Finishing */}
+        {(property.pop_ceiling || property.tiled_floors) && (
+          <div className="mb-6">
+            <h3 className="font-semibold text-base mb-3">House Finishing</h3>
+            <div className="space-y-3 text-sm">
+              {property.pop_ceiling && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Building className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">POP Ceiling</span>
+                  </div>
+                  <span className="text-gray-600">Yes</span>
+                </div>
+              )}
+              {property.tiled_floors && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Building className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Tiled Floors</span>
+                  </div>
+                  <span className="text-gray-600">Yes</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Legal Documents */}
+        {(property.certificate_of_occupancy || property.deed_of_assignment) && (
+          <div className="mb-6">
+            <h3 className="font-semibold text-base mb-3">Legal Documents</h3>
+            <div className="space-y-3 text-sm">
+              {property.certificate_of_occupancy && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Certificate of Occupancy</span>
+                  </div>
+                  <span className="text-gray-600">Available</span>
+                </div>
+              )}
+              {property.deed_of_assignment && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Deed of Assignment</span>
+                  </div>
+                  <span className="text-gray-600">Available</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tenant Preferences - Always show this section */}
+        <div className="mb-6">
+          <h3 className="font-semibold text-base mb-3">Tenant Preferences</h3>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <Heart className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">Allow Pets?</span>
+              </div>
+              <span className="text-gray-600 capitalize">
+                {property.allows_pets === 'yes' ? 'Yes, pets allowed' : 
+                 property.allows_pets === 'no' ? 'No pets' : 
+                 property.allows_pets === 'small-pets' ? 'Only small pets' : 
+                 property.allows_pets ? property.allows_pets.replace('-', ' ') : 'Not specified'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <Star className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">Preferred Tenant Type</span>
+              </div>
+              <span className="text-gray-600 capitalize">
+                {property.tenant_preference ? property.tenant_preference.replace('-', ' ') : 'No preference'}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Inspection Option - Unique Feature */}
@@ -321,16 +670,32 @@ const PropertyDetails = () => {
         <div className="space-y-2">
           <div className="flex justify-between">
             <span>Monthly rent</span>
-            <span className="font-semibold">₦150,000</span>
+            <span className="font-semibold">₦{property.price?.toLocaleString() || property.annual_rent?.toLocaleString()}</span>
           </div>
-          <div className="flex justify-between">
-            <span>Service charge</span>
-            <span>₦25,000</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Security deposit</span>
-            <span>₦300,000</span>
-          </div>
+          {property.service_charge && (
+            <div className="flex justify-between">
+              <span>Service charge</span>
+              <span>₦{property.service_charge.toLocaleString()}</span>
+            </div>
+          )}
+          {property.security_deposit && (
+            <div className="flex justify-between">
+              <span>Security deposit</span>
+              <span>₦{property.security_deposit.toLocaleString()}</span>
+            </div>
+          )}
+          {property.agreement_fee && (
+            <div className="flex justify-between">
+              <span>Agreement fee</span>
+              <span>₦{property.agreement_fee.toLocaleString()}</span>
+            </div>
+          )}
+          {property.legal_fee && (
+            <div className="flex justify-between">
+              <span>Legal fee</span>
+              <span>₦{property.legal_fee.toLocaleString()}</span>
+            </div>
+          )}
         </div>
         <Button className="w-full mt-4">
           <Calendar className="h-4 w-4 mr-2" />
@@ -344,8 +709,8 @@ const PropertyDetails = () => {
           <h2 className="text-lg font-semibold">Reviews</h2>
           <div className="flex items-center gap-1">
             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-            <span className="font-medium">4.8</span>
-            <span className="text-muted-foreground">({reviews.length} reviews)</span>
+            <span className="font-medium">{property.rating || '4.8'}</span>
+            <span className="text-muted-foreground">({property.review_count || '0'} reviews)</span>
           </div>
         </div>
         

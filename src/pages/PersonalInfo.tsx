@@ -36,10 +36,23 @@ const PersonalInfo = () => {
             lastName: data.last_name || '',
             email: user.email || '',
             phone: data.phone || '',
-            address: data.address || '',
-            dateOfBirth: data.date_of_birth || '',
+            address: '',
+            dateOfBirth: '',
             profilePicture: null,
           });
+          
+          // Set avatar preview if exists
+          if (data.avatar_url) {
+            console.log('🖼️ Loading saved avatar:', data.avatar_url);
+            // Create a fake file object for preview
+            fetch(data.avatar_url)
+              .then(res => res.blob())
+              .then(blob => {
+                const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+                setFormData(prev => ({ ...prev, profilePicture: file }));
+              })
+              .catch(err => console.log('Could not load avatar preview:', err));
+          }
         } else {
           // Pre-fill with user email if no profile exists
           setFormData(prev => ({ ...prev, email: user.email || '' }));
@@ -65,28 +78,129 @@ const PersonalInfo = () => {
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    console.log('💾 Save button clicked');
+    if (!user) {
+      console.log('❌ No user found');
+      return;
+    }
+    
+    console.log('📝 Form data:', formData);
     
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          user_id: user.id,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          phone: formData.phone,
-          address: formData.address,
-          date_of_birth: formData.dateOfBirth,
-          updated_at: new Date().toISOString(),
+      let avatarUrl = null;
+      
+      // Upload profile picture if selected
+      if (formData.profilePicture) {
+        console.log('📸 Uploading profile picture:', formData.profilePicture.name);
+        
+        // Compress image before upload
+        const compressedImage = await new Promise<Blob>((resolve) => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const image = new Image();
+          
+          image.onload = () => {
+            const maxSize = 400;
+            const ratio = Math.min(maxSize / image.width, maxSize / image.height);
+            canvas.width = image.width * ratio;
+            canvas.height = image.height * ratio;
+            
+            ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.8);
+          };
+          
+          image.src = URL.createObjectURL(formData.profilePicture!);
         });
-
-      if (error) {
-        console.error('Error saving profile:', error);
-      } else {
-        alert('Profile updated successfully!');
+        
+        const fileName = `${user.id}.jpg`;
+        console.log('📁 File name:', fileName);
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, compressedImage, { upsert: true });
+        
+        console.log('📤 Upload result:', { uploadData, uploadError });
+        
+        if (!uploadError) {
+          const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+          avatarUrl = data.publicUrl;
+          console.log('🔗 Avatar URL:', avatarUrl);
+        } else {
+          console.error('❌ Upload error:', uploadError);
+        }
       }
+      
+      // Check if profile exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      const profileData = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: formData.phone,
+        updated_at: new Date().toISOString(),
+        ...(avatarUrl && { avatar_url: avatarUrl })
+      };
+
+      console.log('💾 Profile data to save:', profileData);
+      
+      if (existingProfile) {
+        // Update existing profile
+        const { error } = await supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new profile
+        const { error } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: user.id,
+            ...profileData
+          });
+
+        if (error) throw error;
+      }
+
+      console.log('✅ Profile saved successfully');
+      
+      // Refetch profile data
+      const { data: updatedProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (updatedProfile) {
+        setFormData(prev => ({
+          ...prev,
+          firstName: updatedProfile.first_name || '',
+          lastName: updatedProfile.last_name || '',
+          phone: updatedProfile.phone || '',
+          profilePicture: null,
+        }));
+        
+        // Load avatar preview if exists
+        if (updatedProfile.avatar_url) {
+          fetch(updatedProfile.avatar_url)
+            .then(res => res.blob())
+            .then(blob => {
+              const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+              setFormData(prev => ({ ...prev, profilePicture: file }));
+            })
+            .catch(err => console.log('Could not load avatar preview:', err));
+        }
+      }
+      
+      alert('Profile updated successfully!');
     } catch (error) {
-      console.error('Error:', error);
+      console.error('❌ Error saving profile:', error);
+      alert('Error saving profile: ' + error.message);
     }
   };
 

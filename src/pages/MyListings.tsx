@@ -1,44 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import PropertyCard from '../components/PropertyCard';
 import CreateListingModal from '../components/CreateListingModal';
-import { ArrowLeft, Plus, Filter, Grid, List } from 'lucide-react';
+import { ArrowLeft, Plus, Filter, Grid, List, Edit, Trash2, MoreVertical } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const MyListings = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [listings] = useState([
-    {
-      id: '1',
-      title: 'My 3BR Apartment',
-      location: 'Lekki, Lagos',
-      price: 2500000,
-      duration: 'year' as const,
-      bedrooms: 3,
-      bathrooms: 2,
-      sqft: 1200,
-      rating: 4.8,
-      imageUrl: '/placeholder.svg',
-      verified: true,
-    },
-    {
-      id: '2',
-      title: 'My Studio Flat',
-      location: 'Ikeja, Lagos',
-      price: 800000,
-      duration: 'year' as const,
-      bedrooms: 1,
-      bathrooms: 1,
-      sqft: 600,
-      rating: 4.5,
-      imageUrl: '/placeholder.svg',
-    },
-  ]);
+  const [listings, setListings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showMenu, setShowMenu] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchMyListings = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .select('id, title, location, price, category, bedrooms, bathrooms, rating, images, verified, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const transformedListings = (data || []).map(prop => ({
+          id: prop.id,
+          title: prop.title,
+          location: prop.location,
+          price: prop.price,
+          duration: prop.category === 'rent' ? 'year' : 'total',
+          bedrooms: prop.bedrooms,
+          bathrooms: prop.bathrooms,
+          rating: prop.rating || 4.5,
+          imageUrl: prop.images?.[0],
+          verified: prop.verified || false,
+          category: prop.category,
+        }));
+
+        setListings(transformedListings);
+      } catch (error) {
+        console.error('Error fetching listings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMyListings();
+  }, [user]);
 
   const handleCreateListing = () => {
     if (user) {
@@ -51,6 +71,30 @@ const MyListings = () => {
   const handleAuthRequired = () => {
     setShowCreateModal(false);
     navigate('/auth', { state: { from: location } });
+  };
+
+  const handleDeleteListing = async (listingId: string) => {
+    if (!confirm('Are you sure you want to delete this listing?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .delete()
+        .eq('id', listingId)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setListings(prev => prev.filter(listing => listing.id !== listingId));
+      toast({ title: 'Success', description: 'Listing deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting listing:', error);
+      toast({ title: 'Error', description: 'Failed to delete listing', variant: 'destructive' });
+    }
+  };
+
+  const handleEditListing = (listingId: string) => {
+    navigate(`/create-rent-listing?edit=${listingId}`);
   };
 
   return (
@@ -101,11 +145,59 @@ const MyListings = () => {
 
         {/* Listings */}
         <div className="px-2 py-4">
-          <div className={viewMode === 'grid' ? 'grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1' : 'space-y-1'}>
-            {listings.map((listing) => (
-              <PropertyCard key={listing.id} {...listing} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p>Loading your listings...</p>
+              </div>
+            </div>
+          ) : listings.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-muted-foreground mb-4">No listings yet</p>
+              <p className="text-sm text-muted-foreground">Create your first listing to get started</p>
+            </div>
+          ) : (
+            <div className={viewMode === 'grid' ? 'grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1' : 'space-y-1'}>
+              {listings.map((listing) => (
+                <div key={listing.id} className="relative group">
+                  <PropertyCard {...listing} />
+                  <div className="absolute top-2 right-2">
+                    <button
+                      onClick={() => setShowMenu(showMenu === listing.id ? null : listing.id)}
+                      className="p-2 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <MoreVertical size={16} className="text-gray-600" />
+                    </button>
+                    {showMenu === listing.id && (
+                      <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-32">
+                        <button
+                          onClick={() => {
+                            handleEditListing(listing.id);
+                            setShowMenu(null);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 text-left"
+                        >
+                          <Edit size={14} className="text-green-500" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleDeleteListing(listing.id);
+                            setShowMenu(null);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 text-left text-red-600"
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <CreateListingModal 

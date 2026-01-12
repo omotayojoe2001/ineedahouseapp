@@ -87,9 +87,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       {/* Image Container */}
       <div className="relative aspect-[4/3] overflow-hidden">
         <img 
-          src={imageUrl} 
+          src={imageUrl || '/placeholder.svg'} 
           alt={title}
           className="w-full h-full object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = '/placeholder.svg';
+          }}
         />
         
         {/* Favorite Button */}
@@ -103,7 +107,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           >
             <Heart 
               size={16} 
-              className={`${isFavorite ? 'text-red-500 fill-red-500' : 'text-white'}`}
+              className={`${isFavorite ? 'text-green-500 fill-green-500' : 'text-white'}`}
             />
           </button>
         )}
@@ -118,7 +122,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           )}
           
           {badge && (
-            <div className="bg-primary text-primary-foreground px-2 py-1 rounded-md text-xs font-medium">
+            <div className="bg-green-600 text-white px-2 py-1 rounded-md text-xs font-medium">
               {badge}
             </div>
           )}
@@ -159,7 +163,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           </div>
           {/* Category Badge */}
           <div className="mt-2">
-            <span className="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+            <span className="inline-block bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
               {duration === 'month' || duration === 'day' || duration === 'week' || duration === 'year' ? 'For Rent' : 
                duration === 'sale' || duration === 'total' ? 'For Sale' : 
                duration === 'service' ? 'Service' :
@@ -214,7 +218,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                 navigate(`/property-inspection/${id}`);
               }
             }}
-            className="w-full bg-primary text-primary-foreground px-4 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-primary-hover active:scale-95"
+            className="w-full bg-green-600 text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-green-700 active:scale-95"
           >
             {duration === 'sale' || duration === 'total' ? 'View Details' : 
              duration === 'service' || duration === 'room' || duration === 'item' || duration === 'delivery' ? 'Book Service' : 
