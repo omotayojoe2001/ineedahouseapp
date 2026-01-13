@@ -92,7 +92,7 @@ const PropertySection: React.FC<PropertySectionProps> = ({
                 )}
                 {/* Category Badge */}
                 <div className="mb-1">
-                  <span className="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                  <span className="inline-block bg-primary/10 text-primary text-xs font-medium px-2 py-1 rounded-full">
                     {property.duration.includes('day') || property.duration.includes('night') ? 'Shortlet' : 
                      property.duration.includes('total') || property.duration.includes('sale') ? 'For Sale' : 
                      property.duration.includes('service') ? 'Service' :

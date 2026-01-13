@@ -20,25 +20,59 @@ const Messages = () => {
 
     const fetchConversations = async () => {
       try {
-        const { data, error } = await supabase
+        // First get conversations
+        const { data: conversationsData, error: conversationsError } = await supabase
           .from('conversations')
-          .select(`
-            *,
-            participant_1_profile:profiles!conversations_participant_1_fkey(first_name, last_name, avatar_url),
-            participant_2_profile:profiles!conversations_participant_2_fkey(first_name, last_name, avatar_url),
-            messages(content, created_at, sender_id, read_at)
-          `)
+          .select('*')
           .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
           .order('last_message_at', { ascending: false });
 
-        if (error) throw error;
+        if (conversationsError) throw conversationsError;
 
-        const processedConversations = (data || []).map(conv => {
-          const otherParticipant = conv.participant_1 === user.id ? conv.participant_2_profile : conv.participant_1_profile;
-          const lastMessage = conv.messages?.[0];
-          const unreadMessages = conv.messages?.filter(msg => 
+        // Get all unique participant IDs
+        const participantIds = new Set<string>();
+        conversationsData?.forEach(conv => {
+          participantIds.add(conv.participant_1);
+          participantIds.add(conv.participant_2);
+        });
+
+        // Fetch profiles for all participants
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, avatar_url')
+          .in('id', Array.from(participantIds));
+
+        // Create a map of profiles
+        const profilesMap = new Map();
+        profilesData?.forEach(profile => {
+          profilesMap.set(profile.id, profile);
+        });
+
+        // Get messages for each conversation
+        const conversationIds = conversationsData?.map(conv => conv.id) || [];
+        const { data: messagesData } = await supabase
+          .from('messages')
+          .select('*')
+          .in('conversation_id', conversationIds)
+          .order('created_at', { ascending: false });
+
+        // Group messages by conversation
+        const messagesByConversation = new Map();
+        messagesData?.forEach(message => {
+          if (!messagesByConversation.has(message.conversation_id)) {
+            messagesByConversation.set(message.conversation_id, []);
+          }
+          messagesByConversation.get(message.conversation_id).push(message);
+        });
+
+        const processedConversations = (conversationsData || []).map(conv => {
+          const otherParticipantId = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
+          const otherParticipant = profilesMap.get(otherParticipantId);
+          const conversationMessages = messagesByConversation.get(conv.id) || [];
+          const lastMessage = conversationMessages[0];
+          const unreadMessages = conversationMessages.filter(msg => 
             msg.sender_id !== user.id && !msg.read_at
-          ).length || 0;
+          ).length;
 
           return {
             id: conv.id,

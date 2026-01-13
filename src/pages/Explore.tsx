@@ -198,12 +198,12 @@ const Explore: React.FC = () => {
     .map(transformProperty);
 
   const propertiesForSale = loading ? [] : properties
-    .filter(prop => prop.category === 'sale')
+    .filter(prop => prop.category === 'sale' && prop.property_type !== 'land')
     .slice(0, 4)
     .map(transformProperty);
 
   const landForSale = loading ? [] : properties
-    .filter(prop => prop.category === 'land')
+    .filter(prop => prop.category === 'sale' && prop.property_type === 'land')
     .slice(0, 4)
     .map(transformProperty);
 
@@ -396,9 +396,6 @@ const Explore: React.FC = () => {
 
   return (
     <Layout activeTab="home">
-      <div className="bg-red-500 text-white p-4 text-center font-bold">
-        SEARCH: "{searchQuery}" - {searchQuery ? 'Filtering properties' : 'Showing all properties'}
-      </div>
       <div className="lg:pt-20">
         <PropertySearchHeader />
         

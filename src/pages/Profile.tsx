@@ -259,21 +259,21 @@ const Profile = () => {
                 );
               } else {
                 return (
-                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-4">
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
                     <div className="flex items-start gap-3">
-                      <div className="bg-blue-100 p-2 rounded-full">
-                        <Shield className="h-5 w-5 text-blue-600" />
+                      <div className="bg-green-100 p-2 rounded-full">
+                        <Shield className="h-5 w-5 text-green-600" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-blue-900">Become a Property Inspector</h3>
-                        <p className="text-sm text-blue-700 mt-1">
+                        <h3 className="font-semibold text-green-900">Become a Property Inspector</h3>
+                        <p className="text-sm text-green-700 mt-1">
                           Earn money by helping people verify properties in your area
                         </p>
-                        <p className="text-xs text-blue-600 mt-2">
+                        <p className="text-xs text-green-600 mt-2">
                           Earn ₦5,000 - ₦15,000 per inspection
                         </p>
                         <button 
-                          className="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                          className="mt-3 bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                           onClick={() => navigate('/inspector-registration')}
                         >
                           Apply Now

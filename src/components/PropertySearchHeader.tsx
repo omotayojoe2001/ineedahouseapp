@@ -167,7 +167,7 @@ const PropertySearchHeader = () => {
           {/* Search Button */}
           <button
             onClick={handleSearch}
-            className="bg-red-500 hover:bg-red-600 text-white p-4 rounded-full ml-2 transition-colors"
+            className="bg-primary hover:bg-primary-hover text-white p-4 rounded-full ml-2 transition-colors"
           >
             <Search size={16} />
           </button>
@@ -188,7 +188,7 @@ const PropertySearchHeader = () => {
                 <input
                   type="text"
                   placeholder="Search cities, states, or areas..."
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   onChange={(e) => {
                     setSearchData(prev => ({ ...prev, location: e.target.value }));
                   }}
@@ -217,7 +217,7 @@ const PropertySearchHeader = () => {
               <div className="mt-4 text-center">
                 <button
                   onClick={() => setActiveField(null)}
-                  className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                  className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
                 >
                   Done
                 </button>
@@ -269,7 +269,7 @@ const PropertySearchHeader = () => {
                     onClick={() => handleDateSelect(date)}
                     className={`p-2 text-sm rounded-lg transition-colors ${
                       date.toISOString().split('T')[0] === searchData.availableFrom
-                        ? 'bg-red-500 text-white'
+                        ? 'bg-primary text-white'
                         : 'hover:bg-gray-100'
                     }`}
                   >
@@ -294,7 +294,7 @@ const PropertySearchHeader = () => {
                     }}
                     className={`p-3 rounded-lg border text-left transition-colors flex items-center gap-3 ${
                       searchData.propertyType === type.id
-                        ? 'bg-red-500 text-white border-red-500'
+                        ? 'bg-primary text-white border-primary'
                         : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
@@ -315,7 +315,7 @@ const PropertySearchHeader = () => {
                       onClick={() => setSearchData(prev => ({ ...prev, priceRange: range.id }))}
                       className={`px-4 py-2 rounded-lg border text-sm transition-colors ${
                         searchData.priceRange === range.id
-                          ? 'bg-red-500 text-white border-red-500'
+                          ? 'bg-primary text-white border-primary'
                           : 'border-gray-300 hover:border-gray-400'
                       }`}
                     >
@@ -328,7 +328,7 @@ const PropertySearchHeader = () => {
               <div className="mt-4 text-center">
                 <button
                   onClick={() => setActiveField(null)}
-                  className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                  className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
                 >
                   Done
                 </button>
