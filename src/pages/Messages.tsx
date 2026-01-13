@@ -1,63 +1,107 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { Search, MoreHorizontal, CheckCheck, MessageCircle } from 'lucide-react';
+import { Search, MoreHorizontal, CheckCheck, MessageCircle, Circle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-interface Message {
-  id: string;
-  name: string;
-  avatar: string;
-  lastMessage: string;
-  timestamp: string;
-  unread: boolean;
-  property?: string;
-}
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const Messages = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const [messages] = useState<Message[]>([
-    {
-      id: '1',
-      name: 'John Adebayo',
-      avatar: '/placeholder.svg',
-      lastMessage: 'Is the apartment still available?',
-      timestamp: '2m ago',
-      unread: true,
-      property: '3BR Apartment in Lekki',
-    },
-    {
-      id: '2',
-      name: 'Sarah Okafor',
-      avatar: '/placeholder.svg',
-      lastMessage: 'Thank you for the inspection report!',
-      timestamp: '1h ago',
-      unread: false,
-      property: 'Villa in Banana Island',
-    },
-    {
-      id: '3',
-      name: 'Mike Johnson',
-      avatar: '/placeholder.svg',
-      lastMessage: 'Can we schedule a viewing for tomorrow?',
-      timestamp: '3h ago',
-      unread: true,
-      property: 'Land in Abuja',
-    },
-    {
-      id: '4',
-      name: 'Grace Emeka',
-      avatar: '/placeholder.svg',
-      lastMessage: 'Perfect! I\'ll take it.',
-      timestamp: '1d ago',
-      unread: false,
-      property: 'Shortlet in VI',
-    },
-  ]);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const filteredMessages = messages.filter(message =>
-    message.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    message.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchConversations = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('conversations')
+          .select(`
+            *,
+            participant_1_profile:profiles!conversations_participant_1_fkey(first_name, last_name, avatar_url),
+            participant_2_profile:profiles!conversations_participant_2_fkey(first_name, last_name, avatar_url),
+            messages(content, created_at, sender_id, read_at)
+          `)
+          .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
+          .order('last_message_at', { ascending: false });
+
+        if (error) throw error;
+
+        const processedConversations = (data || []).map(conv => {
+          const otherParticipant = conv.participant_1 === user.id ? conv.participant_2_profile : conv.participant_1_profile;
+          const lastMessage = conv.messages?.[0];
+          const unreadMessages = conv.messages?.filter(msg => 
+            msg.sender_id !== user.id && !msg.read_at
+          ).length || 0;
+
+          return {
+            id: conv.id,
+            name: `${otherParticipant?.first_name || ''} ${otherParticipant?.last_name || ''}`.trim() || 'Unknown User',
+            avatar: otherParticipant?.avatar_url,
+            lastMessage: lastMessage?.content || 'No messages yet',
+            timestamp: lastMessage ? formatTimestamp(lastMessage.created_at) : '',
+            unread: unreadMessages > 0,
+            unreadCount: unreadMessages,
+            property_id: conv.property_id,
+            property_type: conv.property_type,
+          };
+        });
+
+        setConversations(processedConversations);
+        setUnreadCount(processedConversations.reduce((sum, conv) => sum + conv.unreadCount, 0));
+      } catch (error) {
+        console.error('Error fetching conversations:', error);
+        toast({ title: 'Error', description: 'Failed to load conversations', variant: 'destructive' });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConversations();
+
+    // Subscribe to real-time updates
+    const conversationsSubscription = supabase
+      .channel('conversations')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'conversations' },
+        () => fetchConversations()
+      )
+      .subscribe();
+
+    const messagesSubscription = supabase
+      .channel('messages')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        () => fetchConversations()
+      )
+      .subscribe();
+
+    return () => {
+      conversationsSubscription.unsubscribe();
+      messagesSubscription.unsubscribe();
+    };
+  }, [user, toast]);
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  };
+
+  const filteredConversations = conversations.filter(conv =>
+    conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -66,7 +110,14 @@ const Messages = () => {
         {/* Header */}
         <div className="px-4 pt-12 pb-4 border-b border-border">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-foreground">Messages</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-foreground">Messages</h1>
+              {unreadCount > 0 && (
+                <div className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full min-w-[20px] text-center">
+                  {unreadCount}
+                </div>
+              )}
+            </div>
             <button className="p-2 rounded-lg hover:bg-muted transition-colors">
               <MoreHorizontal size={20} className="text-muted-foreground" />
             </button>
@@ -87,48 +138,60 @@ const Messages = () => {
 
         {/* Messages List */}
         <div className="divide-y divide-border">
-          {filteredMessages.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p>Loading conversations...</p>
+            </div>
+          ) : filteredConversations.length === 0 ? (
             <div className="text-center py-12">
               <MessageCircle size={48} className="text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">No messages yet</h3>
               <p className="text-muted-foreground">Start a conversation with property owners and agents!</p>
             </div>
           ) : (
-            filteredMessages.map((message) => (
+            filteredConversations.map((conversation) => (
               <div 
-                key={message.id} 
+                key={conversation.id} 
                 className="px-4 py-4 hover:bg-muted/20 transition-colors cursor-pointer"
-                onClick={() => navigate(`/messages/${message.id}`)}
+                onClick={() => navigate(`/messages/${conversation.id}`)}
               >
                 <div className="flex items-start space-x-3">
                   {/* Avatar */}
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                      <span className="text-lg font-semibold text-muted-foreground">
-                        {message.name.charAt(0)}
-                      </span>
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                      {conversation.avatar ? (
+                        <img src={conversation.avatar} alt={conversation.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-lg font-semibold text-muted-foreground">
+                          {conversation.name.charAt(0)}
+                        </span>
+                      )}
                     </div>
-                    {message.unread && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full"></div>
+                    {conversation.unread && (
+                      <Circle size={12} className="absolute -top-1 -right-1 text-primary fill-current" />
                     )}
                   </div>
                   
                   {/* Message Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold text-foreground truncate">{message.name}</h3>
-                      <span className="text-xs text-muted-foreground">{message.timestamp}</span>
+                      <h3 className="font-semibold text-foreground truncate">{conversation.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">{conversation.timestamp}</span>
+                        {conversation.unreadCount > 0 && (
+                          <div className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                            {conversation.unreadCount}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     
-                    {message.property && (
-                      <p className="text-xs text-primary mb-1 truncate">{message.property}</p>
-                    )}
-                    
                     <div className="flex items-center justify-between">
-                      <p className={`text-sm truncate ${message.unread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                        {message.lastMessage}
+                      <p className={`text-sm truncate ${conversation.unread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                        {conversation.lastMessage}
                       </p>
-                      {!message.unread && (
+                      {!conversation.unread && (
                         <CheckCheck size={16} className="text-primary ml-2 flex-shrink-0" />
                       )}
                     </div>

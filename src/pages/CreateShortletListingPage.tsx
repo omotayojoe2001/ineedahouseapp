@@ -1,14 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { ArrowLeft, Upload, X, Home, Building, Car, Waves, Dumbbell, Shield, ChefHat, Wifi, Snowflake, Droplets, Zap, Tv, Coffee } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const CreateShortletListingPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [propertyType, setPropertyType] = useState('');
   const [images, setImages] = useState<File[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(!!editId);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -34,6 +44,7 @@ const CreateShortletListingPage = () => {
     cancellationPolicy: '',
     instantBooking: '',
     nearbyAttractions: '',
+    allowPets: '',
   });
 
   const propertyTypes = [
@@ -85,6 +96,77 @@ const CreateShortletListingPage = () => {
     );
   };
 
+  // Load existing shortlet data for editing
+  useEffect(() => {
+    const loadShortletData = async () => {
+      if (!editId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('shortlets')
+          .select('*')
+          .eq('id', editId)
+          .single();
+
+        if (error) throw error;
+        if (!data) return;
+
+        // Pre-fill all form data
+        setFormData({
+          title: data.title || '',
+          description: data.description || '',
+          propertySubType: data.property_sub_type || '',
+          bedrooms: data.bedrooms?.toString() || '',
+          bathrooms: data.bathrooms?.toString() || '',
+          maxGuests: data.max_guests?.toString() || '',
+          sqft: data.area_sqm?.toString() || '',
+          location: data.location || '',
+          address: data.address || '',
+          dailyRate: data.daily_rate?.toString() || '',
+          weeklyRate: data.weekly_rate?.toString() || '',
+          monthlyRate: data.monthly_rate?.toString() || '',
+          cleaningFee: data.cleaning_fee?.toString() || '',
+          securityDeposit: data.security_deposit?.toString() || '',
+          minimumStay: data.minimum_stay?.toString() || '',
+          maximumStay: data.maximum_stay?.toString() || '',
+          checkInTime: data.check_in_time || '',
+          checkOutTime: data.check_out_time || '',
+          houseRules: data.house_rules || '',
+          cancellationPolicy: data.cancellation_policy || '',
+          instantBooking: data.instant_booking ? 'yes' : 'no',
+          nearbyAttractions: data.nearby_attractions || '',
+          allowPets: data.allow_pets || '',
+        });
+
+        setPropertyType(data.property_type || '');
+        setExistingImages(data.images || []);
+        
+        // Pre-fill amenities
+        const amenities = [];
+        if (data.wifi) amenities.push('wifi');
+        if (data.air_conditioning) amenities.push('ac');
+        if (data.kitchen) amenities.push('kitchen');
+        if (data.cable_tv) amenities.push('tv');
+        if (data.parking) amenities.push('parking');
+        if (data.swimming_pool) amenities.push('pool');
+        if (data.gym) amenities.push('gym');
+        if (data.security_24_7) amenities.push('security');
+        if (data.backup_generator) amenities.push('power');
+        if (data.laundry_service) amenities.push('laundry');
+        if (data.hot_water) amenities.push('water');
+        setSelectedAmenities(amenities);
+        
+      } catch (error) {
+        console.error('Error loading shortlet data:', error);
+        toast({ title: 'Error', description: 'Failed to load shortlet data', variant: 'destructive' });
+      } finally {
+        setEditLoading(false);
+      }
+    };
+
+    loadShortletData();
+  }, [editId, toast]);
+
   const handleNext = () => {
     if (currentStep < 4) setCurrentStep(currentStep + 1);
   };
@@ -93,11 +175,114 @@ const CreateShortletListingPage = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const handleSubmit = () => {
-    console.log('Shortlet Listing Data:', formData);
-    console.log('Amenities:', selectedAmenities);
-    alert('Shortlet listing created successfully!');
-    navigate('/my-listings');
+  const handleSubmit = async () => {
+    if (!user) {
+      toast({ title: 'Error', description: 'Please sign in to create listings', variant: 'destructive' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Convert new images to base64
+      const imagePromises = images.map(async (img) => {
+        return new Promise<string>((resolve, reject) => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const image = new Image();
+          
+          image.onload = () => {
+            const maxWidth = 800;
+            const ratio = Math.min(maxWidth / image.width, maxWidth / image.height);
+            canvas.width = image.width * ratio;
+            canvas.height = image.height * ratio;
+            
+            ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            resolve(compressedBase64);
+          };
+          
+          image.onerror = () => reject(new Error('Failed to load image'));
+          image.src = URL.createObjectURL(img);
+        });
+      });
+
+      const processedImages = await Promise.all(imagePromises);
+      // Combine existing images with new ones
+      const allImages = [...existingImages, ...processedImages];
+
+      const shortletData = {
+        title: formData.title,
+        description: formData.description,
+        property_type: propertyType,
+        property_sub_type: formData.propertySubType,
+        location: formData.location,
+        address: formData.address,
+        bedrooms: parseInt(formData.bedrooms) || 0,
+        bathrooms: parseInt(formData.bathrooms) || 0,
+        max_guests: parseInt(formData.maxGuests) || 0,
+        area_sqm: parseFloat(formData.sqft) || 0,
+        
+        // Shortlet-specific pricing
+        daily_rate: parseFloat(formData.dailyRate) || 0,
+        weekly_rate: parseFloat(formData.weeklyRate) || 0,
+        monthly_rate: parseFloat(formData.monthlyRate) || 0,
+        cleaning_fee: parseFloat(formData.cleaningFee) || 0,
+        security_deposit: parseFloat(formData.securityDeposit) || 0,
+        
+        // Booking rules
+        minimum_stay: parseInt(formData.minimumStay) || 1,
+        maximum_stay: formData.maximumStay === 'unlimited' ? null : parseInt(formData.maximumStay),
+        check_in_time: formData.checkInTime,
+        check_out_time: formData.checkOutTime,
+        house_rules: formData.houseRules,
+        cancellation_policy: formData.cancellationPolicy,
+        instant_booking: formData.instantBooking === 'yes',
+        nearby_attractions: formData.nearbyAttractions,
+        allow_pets: formData.allowPets,
+        
+        // Shortlet-specific amenities
+        wifi: selectedAmenities.includes('wifi'),
+        air_conditioning: selectedAmenities.includes('ac'),
+        kitchen: selectedAmenities.includes('kitchen'),
+        cable_tv: selectedAmenities.includes('tv'),
+        parking: selectedAmenities.includes('parking'),
+        swimming_pool: selectedAmenities.includes('pool'),
+        gym: selectedAmenities.includes('gym'),
+        security_24_7: selectedAmenities.includes('security'),
+        backup_generator: selectedAmenities.includes('power'),
+        laundry_service: selectedAmenities.includes('laundry'),
+        hot_water: selectedAmenities.includes('water'),
+        
+        images: allImages,
+        updated_at: new Date().toISOString()
+      };
+
+      if (editId) {
+        // Update existing shortlet
+        const { error } = await supabase
+          .from('shortlets')
+          .update(shortletData)
+          .eq('id', editId);
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Shortlet listing updated successfully!' });
+      } else {
+        // Create new shortlet
+        const { error } = await supabase
+          .from('shortlets')
+          .insert([{ ...shortletData, user_id: user.id, status: 'active' as const }]);
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Shortlet listing created successfully!' });
+      }
+
+      navigate('/my-listings');
+    } catch (error) {
+      console.error('Error saving shortlet listing:', error);
+      toast({ title: 'Error', description: 'Failed to save listing. Please try again.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderStep = () => {
@@ -262,10 +447,25 @@ const CreateShortletListingPage = () => {
                 </label>
               </div>
               
-              {images.length > 0 && (
+              {(existingImages.length > 0 || images.length > 0) && (
                 <div className="grid grid-cols-3 gap-2 mt-4">
+                  {existingImages.map((imageUrl, index) => (
+                    <div key={`existing-${index}`} className="relative">
+                      <img
+                        src={imageUrl}
+                        alt={`Existing ${index + 1}`}
+                        className="w-full h-20 object-cover rounded-lg"
+                      />
+                      <button
+                        onClick={() => setExistingImages(prev => prev.filter((_, i) => i !== index))}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
                   {images.map((image, index) => (
-                    <div key={index} className="relative">
+                    <div key={`new-${index}`} className="relative">
                       <img
                         src={URL.createObjectURL(image)}
                         alt={`Upload ${index + 1}`}
@@ -436,6 +636,20 @@ const CreateShortletListingPage = () => {
                   placeholder="e.g., 5 minutes to beach, Close to shopping mall..."
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Allow Pets</label>
+                <select
+                  value={formData.allowPets}
+                  onChange={(e) => handleInputChange('allowPets', e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-lg"
+                >
+                  <option value="">Select pet policy</option>
+                  <option value="yes">Yes, pets allowed</option>
+                  <option value="no">No pets</option>
+                  <option value="small-pets">Small pets only</option>
+                </select>
+              </div>
             </div>
           </div>
         );
@@ -454,8 +668,8 @@ const CreateShortletListingPage = () => {
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="text-xl font-bold">Create Shortlet Listing</h1>
-              <p className="text-sm text-muted-foreground">Step {currentStep} of 4</p>
+              <h1 className="text-xl font-bold">{editId ? 'Edit Shortlet Listing' : 'Create Shortlet Listing'}</h1>
+              <p className="text-sm text-muted-foreground">{editId ? 'Edit your shortlet listing' : `Step ${currentStep} of 4`}</p>
             </div>
           </div>
           
@@ -483,10 +697,10 @@ const CreateShortletListingPage = () => {
             )}
             <button
               onClick={currentStep === 4 ? handleSubmit : handleNext}
-              disabled={currentStep === 1 && !propertyType}
+              disabled={(currentStep === 1 && !propertyType) || loading}
               className="flex-1 py-3 bg-primary text-primary-foreground rounded-lg font-medium disabled:opacity-50"
             >
-              {currentStep === 4 ? 'Publish Shortlet' : 'Next'}
+              {loading ? 'Saving...' : editId ? 'Update Shortlet' : currentStep === 4 ? 'Publish Shortlet' : 'Next'}
             </button>
           </div>
         </div>

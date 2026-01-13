@@ -4,7 +4,7 @@ import { ChevronRight, Heart, Star } from 'lucide-react';
 interface Property {
   id: string;
   title: string;
-  price: number;
+  price?: number;
   duration: string;
   rating: number;
   imageUrl: string;
@@ -93,9 +93,10 @@ const PropertySection: React.FC<PropertySectionProps> = ({
                 {/* Category Badge */}
                 <div className="mb-1">
                   <span className="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-                    {property.duration.includes('month') || property.duration.includes('day') || property.duration.includes('week') || property.duration.includes('year') ? 'For Rent' : 
+                    {property.duration.includes('day') || property.duration.includes('night') ? 'Shortlet' : 
                      property.duration.includes('total') || property.duration.includes('sale') ? 'For Sale' : 
                      property.duration.includes('service') ? 'Service' :
+                     property.duration.includes('month') || property.duration.includes('week') || property.duration.includes('year') ? 'For Rent' :
                      'Available'}
                   </span>
                 </div>
@@ -104,7 +105,7 @@ const PropertySection: React.FC<PropertySectionProps> = ({
                   <span className="text-xs md:text-sm text-foreground">{property.rating}</span>
                 </div>
                 <p className="text-xs md:text-sm text-foreground">
-                  <span className="font-semibold">NGN {property.price.toLocaleString()}</span> {property.duration}
+                  <span className="font-semibold">NGN {(property.price || 0).toLocaleString()}</span> {property.duration}
                 </p>
               </div>
             </div>

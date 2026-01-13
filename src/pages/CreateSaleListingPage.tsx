@@ -1,14 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { ArrowLeft, Upload, X, Home, Building, Store, Calendar } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const CreateSaleListingPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [propertyType, setPropertyType] = useState('');
   const [images, setImages] = useState<File[]>([]);
+  const [loading, setLoading] = useState(!!editId);
   
+  useEffect(() => {
+    if (editId) {
+      const fetchSaleProperty = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('sale_properties')
+            .select('*')
+            .eq('id', editId)
+            .single();
+
+          if (error) throw error;
+
+          // Convert existing images from base64 to File objects for preview
+          const existingImages: File[] = [];
+          if (data.images && Array.isArray(data.images)) {
+            for (let i = 0; i < data.images.length; i++) {
+              try {
+                const base64 = data.images[i];
+                const response = await fetch(base64);
+                const blob = await response.blob();
+                const file = new File([blob], `existing-image-${i}.jpg`, { type: 'image/jpeg' });
+                existingImages.push(file);
+              } catch (err) {
+                console.error('Error converting image:', err);
+              }
+            }
+          }
+          setImages(existingImages);
+
+          // Pre-fill form with existing data
+          setFormData({
+            title: data.title || '',
+            description: data.description || '',
+            propertySubType: data.property_sub_type || '',
+            bedrooms: data.bedrooms?.toString() || '',
+            bathrooms: data.bathrooms?.toString() || '',
+            totalRooms: '',
+            sqft: '',
+            location: data.location || '',
+            address: data.address || '',
+            salePrice: data.sale_price?.toString() || '',
+            priceNegotiable: data.price_negotiable ? 'yes' : 'no',
+            propertyAge: data.property_age || '',
+            titleDocument: data.title_document || '',
+            landSize: data.land_size?.toString() || '',
+            propertyCondition: data.property_condition || '',
+            reasonForSelling: data.reason_for_selling || '',
+            occupancyStatus: data.occupancy_status || '',
+            nearbyLandmarks: data.nearby_landmarks || '',
+          });
+
+          // Set property type
+          setPropertyType(data.property_type || '');
+
+        } catch (error) {
+          console.error('Error fetching sale property:', error);
+          toast({ title: 'Error', description: 'Failed to load property data', variant: 'destructive' });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchSaleProperty();
+    }
+  }, [editId, toast]);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -66,10 +140,85 @@ const CreateSaleListingPage = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const handleSubmit = () => {
-    console.log('Sale Listing Data:', formData);
-    alert('Sale listing created successfully!');
-    navigate('/my-listings');
+  const handleSubmit = async () => {
+    if (!user) {
+      toast({ title: 'Error', description: 'Please sign in to create listings', variant: 'destructive' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Convert images to base64
+      const imagePromises = images.map(async (img) => {
+        return new Promise<string>((resolve, reject) => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const image = new Image();
+          
+          image.onload = () => {
+            const maxWidth = 800;
+            const ratio = Math.min(maxWidth / image.width, maxWidth / image.height);
+            canvas.width = image.width * ratio;
+            canvas.height = image.height * ratio;
+            
+            ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            resolve(compressedBase64);
+          };
+          
+          image.onerror = () => reject(new Error('Failed to load image'));
+          image.src = URL.createObjectURL(img);
+        });
+      });
+
+      const processedImages = await Promise.all(imagePromises);
+
+      const salePropertyData = {
+        title: formData.title,
+        description: formData.description,
+        property_type: propertyType,
+        property_sub_type: formData.propertySubType,
+        location: formData.location,
+        address: formData.address,
+        bedrooms: parseInt(formData.bedrooms) || null,
+        bathrooms: parseInt(formData.bathrooms) || null,
+        land_size: parseFloat(formData.landSize) || null,
+        sale_price: parseFloat(formData.salePrice) || 0,
+        price_negotiable: formData.priceNegotiable === 'yes',
+        property_age: formData.propertyAge,
+        property_condition: formData.propertyCondition,
+        occupancy_status: formData.occupancyStatus,
+        reason_for_selling: formData.reasonForSelling,
+        title_document: formData.titleDocument,
+        nearby_landmarks: formData.nearbyLandmarks,
+        images: processedImages,
+        user_id: user.id,
+        status: 'active',
+      };
+
+      if (editId) {
+        const { error } = await supabase
+          .from('sale_properties')
+          .update(salePropertyData)
+          .eq('id', editId);
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Sale listing updated successfully!' });
+      } else {
+        const { error } = await supabase
+          .from('sale_properties')
+          .insert([salePropertyData]);
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Sale listing created successfully!' });
+      }
+      navigate('/my-listings');
+    } catch (error) {
+      console.error('Error creating sale listing:', error);
+      toast({ title: 'Error', description: 'Failed to create listing. Please try again.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderStep = () => {
@@ -397,8 +546,8 @@ const CreateSaleListingPage = () => {
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="text-xl font-bold">List Property for Sale</h1>
-              <p className="text-sm text-muted-foreground">Step {currentStep} of 4</p>
+              <h1 className="text-xl font-bold">{editId ? 'Edit Property for Sale' : 'List Property for Sale'}</h1>
+              <p className="text-sm text-muted-foreground">{editId ? 'Edit your sale listing' : `Step ${currentStep} of 4`}</p>
             </div>
           </div>
           
@@ -426,10 +575,10 @@ const CreateSaleListingPage = () => {
             )}
             <button
               onClick={currentStep === 4 ? handleSubmit : handleNext}
-              disabled={currentStep === 1 && !propertyType}
+              disabled={(currentStep === 1 && !propertyType) || loading}
               className="flex-1 py-3 bg-primary text-primary-foreground rounded-lg font-medium disabled:opacity-50"
             >
-              {currentStep === 4 ? 'Publish Sale Listing' : 'Next'}
+              {loading ? 'Saving...' : editId ? 'Update Sale Listing' : currentStep === 4 ? 'Publish Sale Listing' : 'Next'}
             </button>
           </div>
         </div>

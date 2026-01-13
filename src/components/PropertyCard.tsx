@@ -20,6 +20,7 @@ interface PropertyCardProps {
   badge?: string;
   isFavorite?: boolean;
   category?: string;
+  isShortlet?: boolean;
   onClick?: () => void;
   onFavoriteToggle?: () => void;
 }
@@ -41,6 +42,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   verified,
   badge,
   isFavorite,
+  category,
+  isShortlet,
   onClick,
   onFavoriteToggle,
 }) => {
@@ -79,10 +82,17 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     }
   };
 
+  const getNavigationPath = () => {
+    if (isShortlet || category === 'shortlet' || duration === 'day') {
+      return `/shortlet/${id}`;
+    }
+    return `/property/${id}`;
+  };
+
   return (
     <div 
       className="property-card cursor-pointer relative w-full"
-      onClick={onClick || (() => navigate(`/property/${id}`))}
+      onClick={onClick || (() => navigate(getNavigationPath()))}
     >
       {/* Image Container */}
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -164,10 +174,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           {/* Category Badge */}
           <div className="mt-2">
             <span className="inline-block bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-              {duration === 'month' || duration === 'day' || duration === 'week' || duration === 'year' ? 'For Rent' : 
-               duration === 'sale' || duration === 'total' ? 'For Sale' : 
+              {isShortlet || category === 'shortlet' || duration === 'day' ? 'Shortlet' : 
+               duration === 'sale' || duration === 'total' || category === 'sale' ? 'For Sale' : 
+               category === 'land' ? 'Land' :
+               category === 'shop' ? 'Shop' :
+               category === 'event_center' ? 'Event Center' :
                duration === 'service' ? 'Service' :
-               'Available'}
+               'For Rent'}
             </span>
           </div>
         </div>
@@ -211,9 +224,11 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               if (duration === 'sale' || duration === 'total') {
-                onClick ? onClick() : navigate(`/property/${id}`);
+                onClick ? onClick() : navigate(getNavigationPath());
               } else if (duration === 'service' || duration === 'room' || duration === 'item' || duration === 'delivery') {
-                onClick ? onClick() : navigate(`/property/${id}`);
+                onClick ? onClick() : navigate(getNavigationPath());
+              } else if (isShortlet || category === 'shortlet' || duration === 'day') {
+                onClick ? onClick() : navigate(getNavigationPath());
               } else {
                 navigate(`/property-inspection/${id}`);
               }
@@ -222,6 +237,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           >
             {duration === 'sale' || duration === 'total' ? 'View Details' : 
              duration === 'service' || duration === 'room' || duration === 'item' || duration === 'delivery' ? 'Book Service' : 
+             isShortlet || category === 'shortlet' || duration === 'day' ? 'View Shortlet' :
              'Request Inspection'}
           </button>
         </div>

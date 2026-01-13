@@ -2,15 +2,78 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { ArrowLeft, Upload, X, Car, Paintbrush, Package, Wrench, Calendar } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const CreateServicePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const serviceType = searchParams.get('type') || '';
+  const editId = searchParams.get('edit');
+  const { user } = useAuth();
+  const { toast } = useToast();
   
   const [currentStep, setCurrentStep] = useState(1);
   const [images, setImages] = useState<File[]>([]);
+  const [loading, setLoading] = useState(!!editId);
   
+  useEffect(() => {
+    if (editId) {
+      const fetchService = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('services')
+            .select('*')
+            .eq('id', editId)
+            .single();
+
+          if (error) throw error;
+
+          // Convert existing images from base64 to File objects for preview
+          const existingImages: File[] = [];
+          if (data.images && Array.isArray(data.images)) {
+            for (let i = 0; i < data.images.length; i++) {
+              try {
+                const base64 = data.images[i];
+                const response = await fetch(base64);
+                const blob = await response.blob();
+                const file = new File([blob], `existing-image-${i}.jpg`, { type: 'image/jpeg' });
+                existingImages.push(file);
+              } catch (err) {
+                console.error('Error converting image:', err);
+              }
+            }
+          }
+          setImages(existingImages);
+
+          // Pre-fill form with existing data
+          setFormData({
+            title: data.title || '',
+            description: data.description || '',
+            serviceType: data.service_type || serviceType,
+            location: data.location || '',
+            address: data.business_address || '',
+            pricing: data.pricing || '',
+            availability: data.availability || '',
+            experience: data.experience_years || '',
+            certifications: data.certifications || '',
+            contactPhone: data.contact_phone || '',
+            contactEmail: data.contact_email || '',
+          });
+
+        } catch (error) {
+          console.error('Error fetching service:', error);
+          toast({ title: 'Error', description: 'Failed to load service data', variant: 'destructive' });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchService();
+    }
+  }, [editId, serviceType, toast]);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -73,11 +136,79 @@ const CreateServicePage = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const handleSubmit = () => {
-    console.log('Service Data:', formData);
-    console.log('Images:', images);
-    alert('Service listing created successfully!');
-    navigate('/my-listings');
+  const handleSubmit = async () => {
+    if (!user) {
+      toast({ title: 'Error', description: 'Please sign in to create listings', variant: 'destructive' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Convert images to base64
+      const imagePromises = images.map(async (img) => {
+        return new Promise<string>((resolve, reject) => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const image = new Image();
+          
+          image.onload = () => {
+            const maxWidth = 800;
+            const ratio = Math.min(maxWidth / image.width, maxWidth / image.height);
+            canvas.width = image.width * ratio;
+            canvas.height = image.height * ratio;
+            
+            ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            resolve(compressedBase64);
+          };
+          
+          image.onerror = () => reject(new Error('Failed to load image'));
+          image.src = URL.createObjectURL(img);
+        });
+      });
+
+      const processedImages = await Promise.all(imagePromises);
+
+      const serviceData = {
+        title: formData.title,
+        description: formData.description,
+        service_type: formData.serviceType,
+        location: formData.location,
+        pricing: formData.pricing,
+        experience_years: formData.experience,
+        availability: formData.availability,
+        certifications: formData.certifications,
+        contact_phone: formData.contactPhone,
+        contact_email: formData.contactEmail,
+        business_address: formData.address,
+        images: processedImages,
+        user_id: user.id,
+        status: 'active',
+      };
+
+      if (editId) {
+        const { error } = await supabase
+          .from('services')
+          .update(serviceData)
+          .eq('id', editId);
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Service listing updated successfully!' });
+      } else {
+        const { error } = await supabase
+          .from('services')
+          .insert([serviceData]);
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Service listing created successfully!' });
+      }
+      navigate('/my-listings');
+    } catch (error) {
+      console.error('Error creating service listing:', error);
+      toast({ title: 'Error', description: 'Failed to create listing. Please try again.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderStep = () => {
@@ -299,8 +430,8 @@ const CreateServicePage = () => {
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="text-xl font-bold">Create {currentService.title}</h1>
-              <p className="text-sm text-muted-foreground">Step {currentStep} of 3</p>
+              <h1 className="text-xl font-bold">{editId ? `Edit ${currentService.title}` : `Create ${currentService.title}`}</h1>
+              <p className="text-sm text-muted-foreground">{editId ? 'Edit your service listing' : `Step ${currentStep} of 3`}</p>
             </div>
           </div>
           
@@ -333,7 +464,7 @@ const CreateServicePage = () => {
               onClick={currentStep === 3 ? handleSubmit : handleNext}
               className="flex-1 py-3 bg-primary text-primary-foreground rounded-lg font-medium"
             >
-              {currentStep === 3 ? 'Publish Service' : 'Next'}
+              {editId ? 'Update Service' : currentStep === 3 ? 'Publish Service' : 'Next'}
             </button>
           </div>
         </div>

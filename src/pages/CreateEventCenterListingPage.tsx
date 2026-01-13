@@ -1,15 +1,109 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { ArrowLeft, Upload, X, Calendar, Users, MapPin, Clock, Music, Utensils, Car, Shield } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const CreateEventCenterListingPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [venueType, setVenueType] = useState('');
   const [images, setImages] = useState<File[]>([]);
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [loading, setLoading] = useState(!!editId);
   
+  useEffect(() => {
+    if (editId) {
+      const fetchEventCenter = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('event_centers')
+            .select('*')
+            .eq('id', editId)
+            .single();
+
+          if (error) throw error;
+
+          // Convert existing images from base64 to File objects for preview
+          const existingImages: File[] = [];
+          if (data.images && Array.isArray(data.images)) {
+            for (let i = 0; i < data.images.length; i++) {
+              try {
+                const base64 = data.images[i];
+                const response = await fetch(base64);
+                const blob = await response.blob();
+                const file = new File([blob], `existing-image-${i}.jpg`, { type: 'image/jpeg' });
+                existingImages.push(file);
+              } catch (err) {
+                console.error('Error converting image:', err);
+              }
+            }
+          }
+          setImages(existingImages);
+
+          // Pre-fill form with existing data
+          setFormData({
+            title: data.title || '',
+            description: data.description || '',
+            venueSubType: data.venue_sub_type || '',
+            capacity: data.guest_capacity?.toString() || '',
+            indoorOutdoor: data.indoor_outdoor || '',
+            sqft: '',
+            location: data.location || '',
+            address: data.address || '',
+            hourlyRate: data.hourly_rate?.toString() || '',
+            dailyRate: data.daily_rate?.toString() || '',
+            weekendRate: data.weekend_rate?.toString() || '',
+            securityDeposit: data.security_deposit?.toString() || '',
+            cleaningFee: '',
+            minimumBooking: data.minimum_booking || '',
+            maximumBooking: '',
+            setupTime: '',
+            cleanupTime: '',
+            cateringAllowed: data.catering_allowed ? 'yes' : 'no',
+            alcoholAllowed: data.alcohol_allowed ? 'yes' : 'no',
+            musicAllowed: '',
+            decorationPolicy: data.decoration_policy || '',
+            parkingSpaces: '',
+            nearbyHotels: data.nearby_hotels || '',
+            accessibilityFeatures: '',
+          });
+
+          // Set venue type
+          setVenueType(data.venue_type || '');
+
+          // Set selected amenities
+          const amenities = [];
+          if (data.sound_system) amenities.push('sound');
+          if (data.professional_lighting) amenities.push('lighting');
+          if (data.catering_kitchen) amenities.push('catering');
+          if (data.parking_spaces > 0) amenities.push('parking');
+          if (data.security_24_7) amenities.push('security');
+          if (data.air_conditioning) amenities.push('ac');
+          if (data.stage_platform) amenities.push('stage');
+          if (data.tables_chairs) amenities.push('tables');
+          if (data.restroom_facilities) amenities.push('restrooms');
+          if (data.wifi_internet) amenities.push('wifi');
+          setSelectedAmenities(amenities);
+
+        } catch (error) {
+          console.error('Error fetching event center:', error);
+          toast({ title: 'Error', description: 'Failed to load event center data', variant: 'destructive' });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchEventCenter();
+    }
+  }, [editId, toast]);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -96,11 +190,96 @@ const CreateEventCenterListingPage = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const handleSubmit = () => {
-    console.log('Event Center Data:', formData);
-    console.log('Amenities:', selectedAmenities);
-    alert('Event center listing created successfully!');
-    navigate('/my-listings');
+  const handleSubmit = async () => {
+    if (!user) {
+      toast({ title: 'Error', description: 'Please sign in to create listings', variant: 'destructive' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Convert images to base64
+      const imagePromises = images.map(async (img) => {
+        return new Promise<string>((resolve, reject) => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const image = new Image();
+          
+          image.onload = () => {
+            const maxWidth = 800;
+            const ratio = Math.min(maxWidth / image.width, maxWidth / image.height);
+            canvas.width = image.width * ratio;
+            canvas.height = image.height * ratio;
+            
+            ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            resolve(compressedBase64);
+          };
+          
+          image.onerror = () => reject(new Error('Failed to load image'));
+          image.src = URL.createObjectURL(img);
+        });
+      });
+
+      const processedImages = await Promise.all(imagePromises);
+
+      const eventCenterData = {
+        user_id: user.id,
+        title: formData.title,
+        description: formData.description,
+        venue_type: venueType,
+        venue_sub_type: formData.venueSubType,
+        location: formData.location,
+        address: formData.address,
+        guest_capacity: parseInt(formData.capacity) || null,
+        indoor_outdoor: formData.indoorOutdoor,
+        hourly_rate: parseFloat(formData.hourlyRate) || null,
+        daily_rate: parseFloat(formData.dailyRate) || null,
+        weekend_rate: parseFloat(formData.weekendRate) || null,
+        security_deposit: parseFloat(formData.securityDeposit) || 0,
+        minimum_booking: formData.minimumBooking,
+        catering_allowed: formData.cateringAllowed === 'yes',
+        alcohol_allowed: formData.alcoholAllowed === 'yes',
+        decoration_policy: formData.decorationPolicy,
+        nearby_hotels: formData.nearbyHotels,
+        // Amenities
+        sound_system: selectedAmenities.includes('sound'),
+        professional_lighting: selectedAmenities.includes('lighting'),
+        catering_kitchen: selectedAmenities.includes('catering'),
+        parking_spaces: selectedAmenities.includes('parking') ? 50 : 0,
+        security_24_7: selectedAmenities.includes('security'),
+        air_conditioning: selectedAmenities.includes('ac'),
+        stage_platform: selectedAmenities.includes('stage'),
+        tables_chairs: selectedAmenities.includes('tables'),
+        restroom_facilities: selectedAmenities.includes('restrooms'),
+        wifi_internet: selectedAmenities.includes('wifi'),
+        images: processedImages,
+        status: 'active',
+      };
+
+      if (editId) {
+        const { error } = await supabase
+          .from('event_centers')
+          .update(eventCenterData)
+          .eq('id', editId);
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Event center listing updated successfully!' });
+      } else {
+        const { error } = await supabase
+          .from('event_centers')
+          .insert([eventCenterData]);
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Event center listing created successfully!' });
+      }
+      navigate('/my-listings');
+    } catch (error) {
+      console.error('Error creating event center listing:', error);
+      toast({ title: 'Error', description: 'Failed to create listing. Please try again.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderStep = () => {
@@ -448,8 +627,8 @@ const CreateEventCenterListingPage = () => {
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="text-xl font-bold">List Event Center</h1>
-              <p className="text-sm text-muted-foreground">Step {currentStep} of 4</p>
+              <h1 className="text-xl font-bold">{editId ? 'Edit Event Center' : 'List Event Center'}</h1>
+              <p className="text-sm text-muted-foreground">{editId ? 'Edit your event center listing' : `Step ${currentStep} of 4`}</p>
             </div>
           </div>
           
@@ -480,7 +659,7 @@ const CreateEventCenterListingPage = () => {
               disabled={currentStep === 1 && !venueType}
               className="flex-1 py-3 bg-primary text-primary-foreground rounded-lg font-medium disabled:opacity-50"
             >
-              {currentStep === 4 ? 'Publish Event Center' : 'Next'}
+              {currentStep === 4 ? (editId ? 'Update Event Center' : 'Publish Event Center') : 'Next'}
             </button>
           </div>
         </div>

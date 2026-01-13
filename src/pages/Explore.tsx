@@ -20,31 +20,81 @@ const Explore: React.FC = () => {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [properties, setProperties] = useState<any[]>([]);
+  const [shortlets, setShortlets] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch properties and services from database
+  // Fetch properties and shortlets from database
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data: propertiesData, error: propertiesError } = await supabase
-          .from('properties')
-          .select('*, property_images(image_url, is_primary)')
-          .eq('status', 'active')
-          .order('created_at', { ascending: false });
+        // Make all queries in parallel for better performance
+        const [propertiesRes, salePropertiesRes, shortletsRes, servicesRes, shopsRes, eventCentersRes] = await Promise.allSettled([
+          supabase.from('properties').select('*, property_images(image_url, is_primary)').eq('status', 'active').order('created_at', { ascending: false }),
+          supabase.from('sale_properties').select('*').eq('status', 'active').order('created_at', { ascending: false }),
+          supabase.from('shortlets').select('*').eq('status', 'active').order('created_at', { ascending: false }),
+          supabase.from('services').select('*').eq('status', 'active').order('created_at', { ascending: false }),
+          supabase.from('shops').select('*').eq('status', 'active').order('created_at', { ascending: false }),
+          supabase.from('event_centers').select('*').eq('status', 'active').order('created_at', { ascending: false })
+        ]);
 
-        if (propertiesError) throw propertiesError;
+        const allProperties: any[] = [];
+        const allShortlets: any[] = [];
+        const allServices: any[] = [];
 
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('services')
-          .select('*')
-          .eq('status', 'active')
-          .order('created_at', { ascending: false });
+        // Process properties
+        if (propertiesRes.status === 'fulfilled' && propertiesRes.value.data) {
+          allProperties.push(...propertiesRes.value.data);
+        }
 
-        if (servicesError) throw servicesError;
+        // Process sale properties
+        if (salePropertiesRes.status === 'fulfilled' && salePropertiesRes.value.data) {
+          const transformed = salePropertiesRes.value.data.map(prop => ({
+            ...prop,
+            price: prop.sale_price,
+            category: 'sale',
+            property_type: prop.property_type || 'land'
+          }));
+          allProperties.push(...transformed);
+        }
 
-        setProperties(propertiesData || []);
-        setServices(servicesData || []);
+        // Process shortlets
+        if (shortletsRes.status === 'fulfilled' && shortletsRes.value.data) {
+          allShortlets.push(...shortletsRes.value.data);
+        }
+
+        // Process services
+        if (servicesRes.status === 'fulfilled' && servicesRes.value.data) {
+          const transformed = servicesRes.value.data.map(service => ({
+            ...service,
+            price: service.pricing
+          }));
+          allServices.push(...transformed);
+        }
+
+        // Process shops
+        if (shopsRes.status === 'fulfilled' && shopsRes.value.data) {
+          const transformed = shopsRes.value.data.map(shop => ({
+            ...shop,
+            price: shop.monthly_rent,
+            category: 'shop'
+          }));
+          allProperties.push(...transformed);
+        }
+
+        // Process event centers
+        if (eventCentersRes.status === 'fulfilled' && eventCentersRes.value.data) {
+          const transformed = eventCentersRes.value.data.map(event => ({
+            ...event,
+            price: event.daily_rate,
+            category: 'event_center'
+          }));
+          allProperties.push(...transformed);
+        }
+
+        setProperties(allProperties);
+        setShortlets(allShortlets);
+        setServices(allServices);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -128,7 +178,7 @@ const Explore: React.FC = () => {
     return {
       id: prop.id,
       title: prop.title,
-      price: prop.price,
+      price: Number(prop.price) || 0,
       duration: prop.duration || (prop.category === 'rent' ? '/ month' : ' total'),
       rating: prop.rating || 4.5,
       imageUrl: imageUrl,
@@ -183,7 +233,46 @@ const Explore: React.FC = () => {
       location: service.location,
     }));
 
-  const recentListings = loading ? [] : properties
+  const recentRentListings = loading ? [] : properties
+    .filter(prop => prop.category === 'rent')
+    .slice(0, 4)
+    .map(transformProperty);
+
+  const recentSaleListings = loading ? [] : properties
+    .filter(prop => prop.category === 'sale' && prop.property_type !== 'land' && prop.property_type !== 'commercial')
+    .slice(0, 4)
+    .map(transformProperty);
+
+  const recentCommercialListings = loading ? [] : properties
+    .filter(prop => prop.category === 'sale' && prop.property_type === 'commercial')
+    .slice(0, 4)
+    .map(transformProperty);
+
+  const recentLandListings = loading ? [] : properties
+    .filter(prop => prop.category === 'sale' && prop.property_type === 'land')
+    .slice(0, 4)
+    .map(transformProperty);
+
+  const recentShortletListings = loading ? [] : shortlets
+    .slice(0, 4)
+    .map(shortlet => ({
+      id: shortlet.id,
+      title: shortlet.title,
+      price: shortlet.daily_rate,
+      duration: '/ day',
+      rating: shortlet.rating || 4.5,
+      imageUrl: shortlet.images?.[0] || '/placeholder.svg',
+      location: shortlet.location,
+      badge: shortlet.featured ? 'Featured' : undefined,
+    }));
+
+  const recentShopListings = loading ? [] : properties
+    .filter(prop => prop.category === 'shop')
+    .slice(0, 4)
+    .map(transformProperty);
+
+  const recentEventCenterListings = loading ? [] : properties
+    .filter(prop => prop.category === 'event_center')
     .slice(0, 4)
     .map(transformProperty);
 
@@ -213,6 +302,10 @@ const Explore: React.FC = () => {
 
   const handlePropertyClick = (property: any) => {
     navigate(`/property/${property.id}`);
+  };
+
+  const handleShortletClick = (property: any) => {
+    navigate(`/shortlet/${property.id}`);
   };
 
   const handleFavoriteToggle = async (propertyId: string) => {
@@ -324,8 +417,50 @@ const Explore: React.FC = () => {
             />
             
             <PropertySection
-              title="Recent Listings"
-              properties={propertiesWithFavorites(recentListings)}
+              title="Recent Home Listings"
+              properties={propertiesWithFavorites(recentRentListings)}
+              onPropertyClick={handlePropertyClick}
+              onFavoriteToggle={handleFavoriteToggle}
+            />
+            
+            <PropertySection
+              title="Recent Shortlet Listings"
+              properties={propertiesWithFavorites(recentShortletListings)}
+              onPropertyClick={handleShortletClick}
+              onFavoriteToggle={handleFavoriteToggle}
+            />
+            
+            <PropertySection
+              title="Recent Houses for Sale"
+              properties={propertiesWithFavorites(recentSaleListings)}
+              onPropertyClick={handlePropertyClick}
+              onFavoriteToggle={handleFavoriteToggle}
+            />
+            
+            <PropertySection
+              title="Recent Commercial Properties"
+              properties={propertiesWithFavorites(recentCommercialListings)}
+              onPropertyClick={handlePropertyClick}
+              onFavoriteToggle={handleFavoriteToggle}
+            />
+            
+            <PropertySection
+              title="Recent Land Listings"
+              properties={propertiesWithFavorites(recentLandListings)}
+              onPropertyClick={handlePropertyClick}
+              onFavoriteToggle={handleFavoriteToggle}
+            />
+            
+            <PropertySection
+              title="Recent Shop Listings"
+              properties={propertiesWithFavorites(recentShopListings)}
+              onPropertyClick={handlePropertyClick}
+              onFavoriteToggle={handleFavoriteToggle}
+            />
+            
+            <PropertySection
+              title="Recent Event Center Listings"
+              properties={propertiesWithFavorites(recentEventCenterListings)}
               onPropertyClick={handlePropertyClick}
               onFavoriteToggle={handleFavoriteToggle}
             />

@@ -1,15 +1,107 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { ArrowLeft, Upload, X, Store, ShoppingBag, Building, MapPin, Users, Clock, Shield, Car, Zap, Droplets } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const CreateShopListingPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [shopType, setShopType] = useState('');
   const [images, setImages] = useState<File[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  const [loading, setLoading] = useState(!!editId);
   
+  useEffect(() => {
+    if (editId) {
+      const fetchShop = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('shops')
+            .select('*')
+            .eq('id', editId)
+            .single();
+
+          if (error) throw error;
+
+          // Convert existing images from base64 to File objects for preview
+          const existingImages: File[] = [];
+          if (data.images && Array.isArray(data.images)) {
+            for (let i = 0; i < data.images.length; i++) {
+              try {
+                const base64 = data.images[i];
+                const response = await fetch(base64);
+                const blob = await response.blob();
+                const file = new File([blob], `existing-image-${i}.jpg`, { type: 'image/jpeg' });
+                existingImages.push(file);
+              } catch (err) {
+                console.error('Error converting image:', err);
+              }
+            }
+          }
+          setImages(existingImages);
+
+          // Pre-fill form with existing data
+          setFormData({
+            title: data.title || '',
+            description: data.description || '',
+            shopSubType: data.shop_sub_type || '',
+            sqft: data.floor_area_sqft?.toString() || '',
+            frontage: data.frontage_ft?.toString() || '',
+            location: data.location || '',
+            address: data.address || '',
+            monthlyRent: data.monthly_rent?.toString() || '',
+            serviceCharge: data.service_charge?.toString() || '',
+            securityDeposit: data.security_deposit?.toString() || '',
+            businessType: data.suitable_business_types?.[0] || '',
+            targetCustomers: data.target_customers || '',
+            footTraffic: data.foot_traffic_level || '',
+            operatingHours: data.operating_hours || '',
+            loadingAccess: '',
+            storageSpace: '',
+            displayWindows: '',
+            floorLevel: data.floor_level || '',
+            neighboringBusinesses: data.neighboring_businesses || '',
+            publicTransport: data.public_transport_access || '',
+            marketDays: data.market_days || '',
+            competitorAnalysis: data.competition_analysis || '',
+          });
+
+          // Set shop type
+          setShopType(data.shop_type || '');
+
+          // Set selected features
+          const features = [];
+          if (data.customer_parking) features.push('parking');
+          if (data.security_24_7) features.push('security');
+          if (data.power_supply) features.push('power');
+          if (data.water_supply) features.push('water');
+          if (data.loading_bay) features.push('loading');
+          if (data.storage_room) features.push('storage');
+          if (data.display_windows) features.push('display');
+          if (data.signage_space) features.push('signage');
+          if (data.customer_restroom) features.push('restroom');
+          if (data.air_conditioning) features.push('ac');
+          setSelectedFeatures(features);
+
+        } catch (error) {
+          console.error('Error fetching shop:', error);
+          toast({ title: 'Error', description: 'Failed to load shop data', variant: 'destructive' });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchShop();
+    }
+  }, [editId, toast]);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -94,11 +186,98 @@ const CreateShopListingPage = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const handleSubmit = () => {
-    console.log('Shop Listing Data:', formData);
-    console.log('Features:', selectedFeatures);
-    alert('Shop listing created successfully!');
-    navigate('/my-listings');
+  const handleSubmit = async () => {
+    if (!user) {
+      toast({ title: 'Error', description: 'Please sign in to create listings', variant: 'destructive' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Convert images to base64
+      const imagePromises = images.map(async (img) => {
+        return new Promise<string>((resolve, reject) => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const image = new Image();
+          
+          image.onload = () => {
+            const maxWidth = 800;
+            const ratio = Math.min(maxWidth / image.width, maxWidth / image.height);
+            canvas.width = image.width * ratio;
+            canvas.height = image.height * ratio;
+            
+            ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            resolve(compressedBase64);
+          };
+          
+          image.onerror = () => reject(new Error('Failed to load image'));
+          image.src = URL.createObjectURL(img);
+        });
+      });
+
+      const processedImages = await Promise.all(imagePromises);
+
+      const shopData = {
+        title: formData.title,
+        description: formData.description,
+        shop_type: shopType,
+        shop_sub_type: formData.shopSubType,
+        location: formData.location,
+        floor_area_sqft: parseFloat(formData.sqft) || null,
+        frontage_ft: parseFloat(formData.frontage) || null,
+        floor_level: formData.floorLevel,
+        suitable_business_types: formData.businessType ? [formData.businessType] : [],
+        target_customers: formData.targetCustomers,
+        foot_traffic_level: formData.footTraffic,
+        operating_hours: formData.operatingHours,
+        monthly_rent: parseFloat(formData.monthlyRent) || 0,
+        service_charge: parseFloat(formData.serviceCharge) || 0,
+        security_deposit: parseFloat(formData.securityDeposit) || 0,
+        // Features - now properly supported
+        customer_parking: selectedFeatures.includes('parking'),
+        security_24_7: selectedFeatures.includes('security'),
+        power_supply: selectedFeatures.includes('power'),
+        water_supply: selectedFeatures.includes('water'),
+        loading_bay: selectedFeatures.includes('loading'),
+        storage_room: selectedFeatures.includes('storage'),
+        display_windows: selectedFeatures.includes('display'),
+        signage_space: selectedFeatures.includes('signage'),
+        customer_restroom: selectedFeatures.includes('restroom'),
+        air_conditioning: selectedFeatures.includes('ac'),
+        neighboring_businesses: formData.neighboringBusinesses,
+        public_transport_access: formData.publicTransport,
+        market_days: formData.marketDays,
+        competition_analysis: formData.competitorAnalysis,
+        images: processedImages,
+        user_id: user.id,
+        status: 'active',
+      };
+
+      if (editId) {
+        const { error } = await supabase
+          .from('shops')
+          .update(shopData)
+          .eq('id', editId);
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Shop listing updated successfully!' });
+      } else {
+        const { error } = await supabase
+          .from('shops')
+          .insert([shopData]);
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Shop listing created successfully!' });
+      }
+      navigate('/my-listings');
+    } catch (error) {
+      console.error('Error creating shop listing:', error);
+      toast({ title: 'Error', description: 'Failed to create listing. Please try again.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderStep = () => {
@@ -475,8 +654,8 @@ const CreateShopListingPage = () => {
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="text-xl font-bold">List Shop/Store</h1>
-              <p className="text-sm text-muted-foreground">Step {currentStep} of 4</p>
+              <h1 className="text-xl font-bold">{editId ? 'Edit Shop/Store' : 'List Shop/Store'}</h1>
+              <p className="text-sm text-muted-foreground">{editId ? 'Edit your shop listing' : `Step ${currentStep} of 4`}</p>
             </div>
           </div>
           
@@ -507,7 +686,7 @@ const CreateShopListingPage = () => {
               disabled={currentStep === 1 && !shopType}
               className="flex-1 py-3 bg-primary text-primary-foreground rounded-lg font-medium disabled:opacity-50"
             >
-              {currentStep === 4 ? 'Publish Shop Listing' : 'Next'}
+              {currentStep === 4 ? (editId ? 'Update Shop Listing' : 'Publish Shop Listing') : 'Next'}
             </button>
           </div>
         </div>

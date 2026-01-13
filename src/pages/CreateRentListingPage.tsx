@@ -282,6 +282,16 @@ const CreateRentListingPage = () => {
   };
 
   const handleNext = () => {
+    // Redirect shop listings to dedicated shop page
+    if (currentStep === 1 && propertyType === 'shop') {
+      navigate('/create-shop-listing');
+      return;
+    }
+    // Redirect event center listings to dedicated event center page
+    if (currentStep === 1 && propertyType === 'event') {
+      navigate('/create-event-center-listing');
+      return;
+    }
     if (currentStep < 4) setCurrentStep(currentStep + 1);
   };
 

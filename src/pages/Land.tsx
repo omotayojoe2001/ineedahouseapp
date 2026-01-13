@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import PropertyCard from '../components/PropertyCard';
 import { Search, SlidersHorizontal, MapPin, Calculator, Grid, List } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // Import land images
 import property1 from '../assets/land-plot.jpg';
@@ -17,80 +18,44 @@ const Land: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [landProperties, setLandProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const landProperties = [
-    {
-      id: '1',
-      title: 'Prime Commercial Land',
-      location: 'Victoria Island, Lagos',
-      price: 25000000,
-      duration: 'total' as const,
-      sqft: 2000,
-      imageUrl: property1,
-      rating: 4.8,
-      verified: true,
-      badge: 'Commercial',
-    },
-    {
-      id: '2',
-      title: 'Residential Plot',
-      location: 'Lekki Phase 2, Lagos',
-      price: 8500000,
-      duration: 'total' as const,
-      sqft: 1200,
-      imageUrl: property2,
-      rating: 4.6,
-      verified: true,
-      badge: 'Residential',
-    },
-    {
-      id: '3',
-      title: 'Industrial Land',
-      location: 'Agbara Industrial Estate',
-      price: 45000000,
-      duration: 'total' as const,
-      sqft: 5000,
-      imageUrl: property3,
-      rating: 4.7,
-      verified: true,
-      badge: 'Industrial',
-    },
-    {
-      id: '4',
-      title: 'Waterfront Land',
-      location: 'Banana Island, Lagos',
-      price: 75000000,
-      duration: 'total' as const,
-      sqft: 3000,
-      imageUrl: property4,
-      rating: 4.9,
-      verified: true,
-      badge: 'Waterfront',
-    },
-    {
-      id: '5',
-      title: 'Agricultural Land',
-      location: 'Epe, Lagos',
-      price: 3500000,
-      duration: 'total' as const,
-      sqft: 10000,
-      imageUrl: property1,
-      rating: 4.4,
-      badge: 'Agricultural',
-    },
-    {
-      id: '6',
-      title: 'Mixed-Use Plot',
-      location: 'Maitama, Abuja',
-      price: 35000000,
-      duration: 'total' as const,
-      sqft: 2500,
-      imageUrl: property2,
-      rating: 4.5,
-      verified: true,
-      badge: 'Mixed-Use',
-    },
-  ];
+  useEffect(() => {
+    const fetchLandProperties = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('sale_properties')
+          .select('*')
+          .eq('status', 'active')
+          .eq('property_type', 'land')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const transformedProperties = (data || []).map(prop => ({
+          id: prop.id,
+          title: prop.title,
+          location: prop.location,
+          price: prop.sale_price,
+          duration: 'total' as const,
+          sqft: prop.area_sqm,
+          imageUrl: prop.images?.[0] || property1,
+          rating: prop.rating || 4.5,
+          verified: prop.verified || false,
+          badge: prop.property_sub_type || 'Land',
+        }));
+
+        setLandProperties(transformedProperties);
+      } catch (error) {
+        console.error('Error fetching land properties:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLandProperties();
+  }, []);
 
   const landTypes = [
     { id: 'residential', label: 'Residential' },
@@ -208,16 +173,25 @@ const Land: React.FC = () => {
 
         {/* Land Grid */}
         <div className="px-2 py-4">
-          <div className={`grid gap-1 ${viewMode === 'grid' ? 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
-            {filteredProperties.map((property) => (
-              <PropertyCard
-                key={property.id}
-                {...property}
-                onClick={() => handlePropertyClick(property)}
-                onFavoriteToggle={() => handleFavoriteToggle(property.id)}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p>Loading land properties...</p>
+              </div>
+            </div>
+          ) : (
+            <div className={`grid gap-1 ${viewMode === 'grid' ? 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
+              {filteredProperties.map((property) => (
+                <PropertyCard
+                  key={property.id}
+                  {...property}
+                  onClick={() => handlePropertyClick(property)}
+                  onFavoriteToggle={() => handleFavoriteToggle(property.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Bottom Spacing */}

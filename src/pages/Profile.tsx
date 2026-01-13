@@ -41,16 +41,62 @@ const Profile = () => {
         console.log('🔍 Profile page - User ID:', user.id);
         console.log('👤 Profile page - Profile data:', profileData);
 
-        // Fetch stats
-        const [listingsRes, savedRes] = await Promise.all([
-          supabase.from('properties').select('id', { count: 'exact' }).eq('user_id', user.id),
-          supabase.from('property_favorites').select('id', { count: 'exact' }).eq('user_id', user.id)
-        ]);
+        // Fetch stats from all tables
+        const statsPromises = [];
+        let totalListings = 0;
+        
+        // Properties
+        try {
+          const { count } = await supabase.from('properties').select('id', { count: 'exact' }).eq('user_id', user.id);
+          totalListings += count || 0;
+        } catch (error) { console.log('Properties table not accessible'); }
+        
+        // Shortlets
+        try {
+          const { count } = await supabase.from('shortlets').select('id', { count: 'exact' }).eq('user_id', user.id);
+          totalListings += count || 0;
+        } catch (error) { console.log('Shortlets table not accessible'); }
+        
+        // Sale properties
+        try {
+          const { count } = await supabase.from('sale_properties').select('id', { count: 'exact' }).eq('user_id', user.id);
+          totalListings += count || 0;
+        } catch (error) { console.log('Sale properties table not accessible'); }
+        
+        // Services
+        try {
+          const { count } = await supabase.from('services').select('id', { count: 'exact' }).eq('user_id', user.id);
+          totalListings += count || 0;
+        } catch (error) { console.log('Services table not accessible'); }
+        
+        // Shops
+        try {
+          const { count } = await supabase.from('shops').select('id', { count: 'exact' }).eq('user_id', user.id);
+          totalListings += count || 0;
+        } catch (error) { console.log('Shops table not accessible'); }
+        
+        // Event centers
+        try {
+          const { count } = await supabase.from('event_centers').select('id', { count: 'exact' }).eq('user_id', user.id);
+          totalListings += count || 0;
+        } catch (error) { console.log('Event centers table not accessible'); }
+        
+        // Favorites
+        let totalSaved = 0;
+        try {
+          const { count } = await supabase.from('property_favorites').select('id', { count: 'exact' }).eq('user_id', user.id);
+          totalSaved += count || 0;
+        } catch (error) { console.log('Property favorites table not accessible'); }
+        
+        try {
+          const { count } = await supabase.from('shortlet_favorites').select('id', { count: 'exact' }).eq('user_id', user.id);
+          totalSaved += count || 0;
+        } catch (error) { console.log('Shortlet favorites table not accessible'); }
 
         setProfile(profileData);
         setStats({
-          listings: listingsRes.count || 0,
-          saved: savedRes.count || 0,
+          listings: totalListings,
+          saved: totalSaved,
           messages: 0 // Placeholder
         });
       } catch (error) {

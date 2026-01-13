@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import PropertyCard from '../components/PropertyCard';
 import { Search, SlidersHorizontal, MapPin, TrendingUp, Grid, List } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // Import property images
 import property1 from '../assets/property-1.jpg';
@@ -18,91 +19,46 @@ const Buy: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-  const propertiesForSale = [
-    {
-      id: '1',
-      title: '4BR Detached House',
-      location: 'Lekki Phase 1, Lagos',
-      price: 45000000,
-      duration: 'sale' as const,
-      bedrooms: 4,
-      bathrooms: 3,
-      sqft: 2500,
-      imageUrl: property1,
-      rating: 4.8,
-      verified: true,
-      badge: 'New Build',
-    },
-    {
-      id: '2',
-      title: 'Modern Duplex',
-      location: 'Victoria Island, Lagos',
-      price: 65000000,
-      duration: 'sale' as const,
-      bedrooms: 5,
-      bathrooms: 4,
-      sqft: 3200,
-      imageUrl: property2,
-      rating: 4.9,
-      verified: true,
-      badge: 'Luxury',
-    },
-    {
-      id: '3',
-      title: '3BR Terrace House',
-      location: 'Ikeja GRA, Lagos',
-      price: 28000000,
-      duration: 'sale' as const,
-      bedrooms: 3,
-      bathrooms: 2,
-      sqft: 1800,
-      imageUrl: property3,
-      rating: 4.6,
-      verified: true,
-      badge: 'Good Deal',
-    },
-    {
-      id: '4',
-      title: 'Executive Mansion',
-      location: 'Banana Island, Lagos',
-      price: 150000000,
-      duration: 'sale' as const,
-      bedrooms: 6,
-      bathrooms: 5,
-      sqft: 5000,
-      imageUrl: property4,
-      rating: 4.9,
-      verified: true,
-      badge: 'Premium',
-    },
-    {
-      id: '5',
-      title: '2BR Apartment',
-      location: 'Yaba, Lagos',
-      price: 15000000,
-      duration: 'sale' as const,
-      bedrooms: 2,
-      bathrooms: 2,
-      sqft: 1200,
-      imageUrl: property1,
-      rating: 4.4,
-      badge: 'Affordable',
-    },
-    {
-      id: '6',
-      title: 'Townhouse Complex',
-      location: 'Maitama, Abuja',
-      price: 85000000,
-      duration: 'sale' as const,
-      bedrooms: 4,
-      bathrooms: 3,
-      sqft: 2800,
-      imageUrl: property2,
-      rating: 4.7,
-      verified: true,
-      badge: 'Investment',
-    },
-  ];
+  const [propertiesForSale, setPropertiesForSale] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSaleProperties = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('sale_properties')
+          .select('*')
+          .eq('status', 'active')
+          .in('property_type', ['house', 'commercial'])
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const transformedProperties = (data || []).map(prop => ({
+          id: prop.id,
+          title: prop.title,
+          location: prop.location,
+          price: prop.sale_price,
+          duration: 'sale' as const,
+          bedrooms: prop.bedrooms,
+          bathrooms: prop.bathrooms,
+          sqft: prop.area_sqm,
+          imageUrl: prop.images?.[0] || property1,
+          rating: prop.rating || 4.5,
+          verified: prop.verified || false,
+          badge: prop.property_sub_type || 'For Sale',
+        }));
+
+        setPropertiesForSale(transformedProperties);
+      } catch (error) {
+        console.error('Error fetching sale properties:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSaleProperties();
+  }, []);
 
   const priceRanges = [
     { label: 'Under ₦20M', min: 0, max: 20000000 },
@@ -223,16 +179,25 @@ const Buy: React.FC = () => {
 
         {/* Properties Grid */}
         <div className="px-2 py-4">
-          <div className={`grid gap-1 ${viewMode === 'grid' ? 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
-            {filteredProperties.map((property) => (
-              <PropertyCard
-                key={property.id}
-                {...property}
-                onClick={() => handlePropertyClick(property)}
-                onFavoriteToggle={() => handleFavoriteToggle(property.id)}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p>Loading properties...</p>
+              </div>
+            </div>
+          ) : (
+            <div className={`grid gap-1 ${viewMode === 'grid' ? 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
+              {filteredProperties.map((property) => (
+                <PropertyCard
+                  key={property.id}
+                  {...property}
+                  onClick={() => handlePropertyClick(property)}
+                  onFavoriteToggle={() => handleFavoriteToggle(property.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Bottom Spacing */}

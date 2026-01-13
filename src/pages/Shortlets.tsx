@@ -1,114 +1,85 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import PropertyCard from '../components/PropertyCard';
 import { Search, SlidersHorizontal, MapPin, Calendar, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-// Import property images
-import property1 from '../assets/property-1.jpg';
-import property2 from '../assets/property-2.jpg';
-import property3 from '../assets/property-3.jpg';
-import property4 from '../assets/property-4.jpg';
+import { supabase } from '@/integrations/supabase/client';
+import { PropertyService } from '../services/propertyService';
 
 const Shortlets: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [shortletProperties, setShortletProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const shortletProperties = [
-    {
-      id: '1',
-      title: 'Luxury Serviced Apartment',
-      location: 'Victoria Island, Lagos',
-      price: 35000,
-      duration: 'day' as const,
-      bedrooms: 2,
-      bathrooms: 2,
-      sqft: 1200,
-      imageUrl: property1,
-      rating: 4.9,
-      verified: true,
-      badge: 'Popular',
-    },
-    {
-      id: '2',
-      title: 'Executive Studio',
-      location: 'Lekki Phase 1, Lagos',
-      price: 25000,
-      duration: 'day' as const,
-      bedrooms: 1,
-      bathrooms: 1,
-      sqft: 800,
-      imageUrl: property2,
-      rating: 4.7,
-      verified: true,
-    },
-    {
-      id: '3',
-      title: 'Premium 3BR Shortlet',
-      location: 'Ikeja GRA, Lagos',
-      price: 45000,
-      duration: 'day' as const,
-      bedrooms: 3,
-      bathrooms: 2,
-      sqft: 1600,
-      imageUrl: property3,
-      rating: 4.8,
-      verified: true,
-      badge: 'New',
-    },
-    {
-      id: '4',
-      title: 'Cozy 1BR Apartment',
-      location: 'Yaba, Lagos',
-      price: 18000,
-      duration: 'day' as const,
-      bedrooms: 1,
-      bathrooms: 1,
-      sqft: 650,
-      imageUrl: property4,
-      rating: 4.5,
-    },
-    {
-      id: '5',
-      title: 'Spacious 4BR Duplex',
-      location: 'Maitama, Abuja',
-      price: 65000,
-      duration: 'day' as const,
-      bedrooms: 4,
-      bathrooms: 3,
-      sqft: 2500,
-      imageUrl: property1,
-      rating: 4.9,
-      verified: true,
-      badge: 'Featured',
-    },
-  ];
+  // Fetch shortlet properties from database
+  useEffect(() => {
+    const fetchShortlets = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('shortlets')
+          .select('*')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const transformedProperties = (data || []).map(shortlet => ({
+          id: shortlet.id,
+          title: shortlet.title,
+          location: shortlet.location,
+          price: shortlet.daily_rate,
+          duration: 'day' as const,
+          bedrooms: shortlet.bedrooms,
+          bathrooms: shortlet.bathrooms,
+          sqft: shortlet.area_sqm,
+          imageUrl: shortlet.images?.[0] || '/placeholder.svg',
+          rating: shortlet.rating || 4.5,
+          verified: shortlet.verified || false,
+        }));
+
+        setShortletProperties(transformedProperties);
+      } catch (error) {
+        console.error('Error fetching shortlets:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchShortlets();
+  }, []);
 
   const handlePropertyClick = (property: any) => {
-    navigate(`/property/${property.id}`);
+    navigate(`/shortlet/${property.id}`);
   };
 
-  const handleFavoriteToggle = (propertyId: string) => {
-    const newFavorites = new Set(favorites);
-    const isAdding = !favorites.has(propertyId);
-    
-    if (isAdding) {
-      newFavorites.add(propertyId);
+  const handleFavoriteToggle = async (propertyId: string) => {
+    try {
+      const isAdding = await PropertyService.toggleFavorite(propertyId);
+      
+      const newFavorites = new Set(favorites);
+      if (isAdding) {
+        newFavorites.add(propertyId);
+      } else {
+        newFavorites.delete(propertyId);
+      }
+      setFavorites(newFavorites);
+      
       toast({
-        title: "Property Saved!",
-        description: "Added to your saved properties",
+        title: isAdding ? "Property Saved!" : "Property Removed",
+        description: isAdding ? "Added to your saved properties" : "Removed from your saved properties",
       });
-    } else {
-      newFavorites.delete(propertyId);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
       toast({
-        title: "Property Removed",
-        description: "Removed from your saved properties",
+        title: "Error",
+        description: "Please sign in to save properties",
+        variant: "destructive",
       });
     }
-    setFavorites(newFavorites);
   };
 
   const filteredProperties = shortletProperties.filter(property =>
@@ -165,20 +136,32 @@ const Shortlets: React.FC = () => {
 
         {/* Properties List */}
         <div className="px-2 py-4">
-          <div className="flex items-center justify-between mb-4 px-2">
-            <p className="text-sm text-muted-foreground">{filteredProperties.length} shortlets available</p>
-          </div>
-          
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1">
-            {filteredProperties.map((property) => (
-              <PropertyCard
-                key={property.id}
-                {...property}
-                onClick={() => handlePropertyClick(property)}
-                onFavoriteToggle={() => handleFavoriteToggle(property.id)}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p>Loading shortlets...</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-4 px-2">
+                <p className="text-sm text-muted-foreground">{filteredProperties.length} shortlets available</p>
+              </div>
+              
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1">
+                {filteredProperties.map((property) => (
+                  <PropertyCard
+                    key={property.id}
+                    {...property}
+                    isShortlet={true}
+                    onClick={() => handlePropertyClick(property)}
+                    onFavoriteToggle={() => handleFavoriteToggle(property.id)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Bottom Spacing */}

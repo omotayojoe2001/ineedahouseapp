@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import PropertyDetails from "./pages/PropertyDetails";
+import ShortletDetails from "./pages/ShortletDetails";
 import Saved from "./pages/Saved";
 import CreateListing from "./pages/CreateListing";
 import Messages from "./pages/Messages";
@@ -107,6 +108,7 @@ const App = () => (
             <Route path="/location-visibility" element={<LocationVisibilityPage />} />
             <Route path="/search-results" element={<SearchResultsPage />} />
             <Route path="/property/:id" element={<PropertyDetails />} />
+            <Route path="/shortlet/:id" element={<ShortletDetails />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

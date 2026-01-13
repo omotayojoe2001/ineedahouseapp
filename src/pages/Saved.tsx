@@ -125,7 +125,11 @@ const Saved = () => {
           ) : (
             <div className={viewMode === 'grid' ? 'grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1' : 'space-y-1'}>
               {filteredProperties.map((property) => (
-                <PropertyCard key={property.id} {...property} />
+                <PropertyCard 
+                  key={property.id} 
+                  {...property} 
+                  isShortlet={property.category === 'shortlet' || property.duration === 'day'}
+                />
               ))}
             </div>
           )}
