@@ -236,11 +236,6 @@ const ShortletDetails = () => {
 
         {/* Rating & Highlights */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-            <span className="font-medium">{shortlet.rating || '4.8'}</span>
-            <span className="text-muted-foreground">({shortlet.rating_count || '0'} reviews)</span>
-          </div>
           <Badge variant="secondary" className="bg-green-50 text-green-700">
             <CheckCircle className="h-3 w-3 mr-1" />
             {shortlet.verified ? 'Verified Host' : 'Listed'}

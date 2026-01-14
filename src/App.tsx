@@ -29,6 +29,7 @@ import CategoryListing from "./pages/CategoryListing";
 import CreateListingPage from "./pages/CreateListingPage";
 import CreateServicePage from "./pages/CreateServicePage";
 import CreateRentListingPage from "./pages/CreateRentListingPage";
+import NewRentListingForm from "./pages/NewRentListingForm";
 import CreateSaleListingPage from "./pages/CreateSaleListingPage";
 import CreateShortletListingPage from "./pages/CreateShortletListingPage";
 import CreateEventCenterListingPage from "./pages/CreateEventCenterListingPage";
@@ -78,6 +79,7 @@ const App = () => (
             <Route path="/create-listing" element={<CreateListingPage />} />
             <Route path="/create-service" element={<CreateServicePage />} />
             <Route path="/create-rent-listing" element={<CreateRentListingPage />} />
+            <Route path="/create-rent-listing-new" element={<NewRentListingForm />} />
             <Route path="/create-sale-listing" element={<CreateSaleListingPage />} />
             <Route path="/create-shortlet-listing" element={<CreateShortletListingPage />} />
             <Route path="/create-event-center-listing" element={<CreateEventCenterListingPage />} />

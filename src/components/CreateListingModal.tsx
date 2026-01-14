@@ -114,31 +114,31 @@ const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, onClose
   const handleCategorySelect = (categoryId: string) => {
     onClose();
     
-    // Route to specific pages based on category
+    // Route to new Airbnb-style pages
     switch (categoryId) {
       case 'rent':
-        navigate('/create-rent-listing');
+        navigate('/create-rent-listing-new');
         break;
       case 'sale':
-        navigate('/create-sale-listing');
+        navigate('/create-sale-listing-new');
         break;
       case 'shortlet':
-        navigate('/create-shortlet-listing');
+        navigate('/create-shortlet-listing-new');
         break;
       case 'land':
-        navigate('/create-sale-listing?type=land');
+        navigate('/create-sale-listing-new?type=land');
         break;
       case 'shop':
-        navigate('/create-shop-listing');
+        navigate('/create-shop-listing-new');
         break;
       case 'event':
-        navigate('/create-event-center-listing');
+        navigate('/create-event-center-listing-new');
         break;
       case 'relocation':
       case 'painting':
       case 'furniture':
       case 'other':
-        navigate(`/create-service?type=${categoryId}`);
+        navigate(`/create-service-new?type=${categoryId}`);
         break;
       default:
         navigate('/create-listing');

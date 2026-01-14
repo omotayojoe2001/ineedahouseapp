@@ -103,7 +103,7 @@ const MyListings = () => {
             id: service.id,
             title: service.title,
             location: service.location,
-            price: service.pricing,
+            price: parseFloat(service.pricing?.replace(/[^0-9.]/g, '') || '0'),
             duration: 'service',
             rating: service.rating || 4.5,
             imageUrl: service.images?.[0],
@@ -259,7 +259,7 @@ const MyListings = () => {
     // Route to appropriate edit page based on category
     switch (listing.category) {
       case 'rent':
-        navigate(`/create-rent-listing?edit=${listing.id}`);
+        navigate(`/create-rent-listing-new?edit=${listing.id}`);
         break;
       case 'sale':
         navigate(`/create-sale-listing?edit=${listing.id}`);

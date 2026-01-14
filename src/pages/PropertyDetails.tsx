@@ -68,8 +68,33 @@ const PropertyDetails = () => {
           return;
         }
         
-        console.log('🏠 Property data:', propertyData);
-        console.log('👤 Property user_id:', propertyData.user_id);
+        console.log('🏠 Property data loaded from DB:', propertyData);
+        console.log('📊 Interior Features from DB:', {
+          living_room: propertyData.living_room,
+          dining_area: propertyData.dining_area,
+          kitchen_cabinets: propertyData.kitchen_cabinets,
+          countertop: propertyData.countertop,
+          heat_extractor: propertyData.heat_extractor,
+          balcony_feature: propertyData.balcony_feature,
+          storage: propertyData.storage
+        });
+        console.log('⚡ Utilities from DB:', {
+          electricity_type: propertyData.electricity_type,
+          transformer: propertyData.transformer,
+          generator_type: propertyData.generator_type,
+          water_supply: propertyData.water_supply,
+          internet_ready: propertyData.internet_ready
+        });
+        console.log('💰 Fees from DB:', {
+          security_deposit: propertyData.security_deposit,
+          service_charge: propertyData.service_charge,
+          agreement_fee: propertyData.agreement_fee,
+          legal_fee: propertyData.legal_fee
+        });
+        console.log('👥 Tenant Preferences from DB:', {
+          allows_pets: propertyData.allows_pets,
+          tenant_preference: propertyData.tenant_preference
+        });
         
         // Fetch owner profile separately
         const { data: profileData, error: profileError } = await supabase
@@ -228,25 +253,6 @@ const PropertyDetails = () => {
 
   const amenities = getAmenities();
 
-  const reviews = [
-    {
-      id: 1,
-      name: 'Sarah Johnson',
-      avatar: 'SJ',
-      rating: 5,
-      date: 'March 2024',
-      comment: 'Amazing property! The location is perfect and the owner was very responsive. Highly recommended!'
-    },
-    {
-      id: 2,
-      name: 'Michael Chen',
-      avatar: 'MC',
-      rating: 4,
-      date: 'February 2024',
-      comment: 'Great place to stay. Clean, comfortable, and exactly as described. Would definitely book again.'
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header with Image Carousel */}
@@ -312,6 +318,12 @@ const PropertyDetails = () => {
             <MapPin className="h-4 w-4" />
             <span>{property.address || property.location}</span>
           </div>
+          {/* Show LGA and State separately */}
+          {property.location && (
+            <div className="flex items-center gap-1 text-sm text-gray-600 mt-1 ml-5">
+              <span className="font-medium">{property.location}</span>
+            </div>
+          )}
           {property.description && (
             <p className="text-muted-foreground mt-2">{property.description}</p>
           )}
@@ -361,11 +373,6 @@ const PropertyDetails = () => {
 
         {/* Rating & Highlights */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-            <span className="font-medium">{property.rating || '4.8'}</span>
-            <span className="text-muted-foreground">({property.review_count || '0'} reviews)</span>
-          </div>
           <Badge variant="secondary" className="bg-green-50 text-green-700">
             <CheckCircle className="h-3 w-3 mr-1" />
             {property.verified ? 'Verified' : 'Listed'}
@@ -374,7 +381,7 @@ const PropertyDetails = () => {
 
         {/* Highlights */}
         <div className="bg-green-50 p-3 rounded-lg">
-          <p className="text-green-800 text-sm font-medium">Top 10% of homes in this area</p>
+          <p className="text-green-800 text-sm font-medium">Verified Property</p>
         </div>
       </div>
 
@@ -396,10 +403,6 @@ const PropertyDetails = () => {
               <p className="font-medium">{property.profiles ? `${property.profiles.first_name} ${property.profiles.last_name}` : 'Property Owner'}</p>
               <p className="text-sm text-muted-foreground">Contact for details</p>
               <div className="flex items-center gap-2 mt-1">
-                <div className="flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                  <span className="text-xs font-medium">4.9</span>
-                </div>
                 <Badge variant="outline" className="text-xs">
                   <Shield className="h-3 w-3 mr-1" />
                   Verified Host
@@ -419,6 +422,12 @@ const PropertyDetails = () => {
               <Button variant="outline" size="sm" onClick={() => window.open(`tel:${property.profiles.phone}`)}>
                 <Phone className="h-4 w-4 mr-1" />
                 Call
+              </Button>
+            )}
+            {property.profiles?.whatsapp_number && (
+              <Button variant="outline" size="sm" className="bg-green-50 hover:bg-green-100" onClick={() => window.open(`https://wa.me/${property.profiles.whatsapp_number.replace(/[^0-9]/g, '')}`, '_blank')}>
+                <MessageCircle className="h-4 w-4 mr-1" />
+                WhatsApp
               </Button>
             )}
           </div>
@@ -957,13 +966,13 @@ const PropertyDetails = () => {
                   <span className="text-gray-600 capitalize">{property.electricity_type === 'public' ? 'NEPA/PHCN' : property.electricity_type}</span>
                 </div>
               )}
-              {property.transformer && (
+              {property.transformer !== undefined && (
                 <div className="flex items-center justify-between py-2 border-b border-gray-100">
                   <div className="flex items-center gap-3">
                     <Wifi className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">Transformer</span>
                   </div>
-                  <span className="text-gray-600 capitalize">{property.transformer}</span>
+                  <span className="text-gray-600 capitalize">{property.transformer ? 'Dedicated' : 'Shared'}</span>
                 </div>
               )}
               {property.generator_type && (
@@ -984,13 +993,13 @@ const PropertyDetails = () => {
                   <span className="text-gray-600 capitalize">{property.water_supply}</span>
                 </div>
               )}
-              {property.internet_ready && (
+              {property.internet_ready !== undefined && (
                 <div className="flex items-center justify-between py-2 border-b border-gray-100">
                   <div className="flex items-center gap-3">
                     <Wifi className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">Internet</span>
                   </div>
-                  <span className="text-gray-600 capitalize">{property.internet_ready.replace('-', ' ')}</span>
+                  <span className="text-gray-600 capitalize">{property.internet_ready ? 'Fiber/Cable Ready' : 'Not Available'}</span>
                 </div>
               )}
             </div>
@@ -1288,6 +1297,16 @@ const PropertyDetails = () => {
                   <span>₦{property.legal_fee.toLocaleString()}</span>
                 </div>
               )}
+              <div className="flex justify-between pt-3 mt-3 border-t-2 border-gray-300">
+                <span className="font-bold text-lg">Total Initial Payment</span>
+                <span className="font-bold text-lg text-primary">₦{(
+                  (property.price || property.annual_rent || 0) +
+                  (property.service_charge || 0) +
+                  (property.security_deposit || 0) +
+                  (property.agreement_fee || 0) +
+                  (property.legal_fee || 0)
+                ).toLocaleString()}</span>
+              </div>
             </>
           )}
         </div>
@@ -1307,38 +1326,12 @@ const PropertyDetails = () => {
       <div className="p-4 border-t border-border">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Reviews</h2>
-          <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-            <span className="font-medium">{property.rating || '4.8'}</span>
-            <span className="text-muted-foreground">({property.review_count || '0'} reviews)</span>
-          </div>
         </div>
         
-        <div className="space-y-4">
-          {reviews.map((review) => (
-            <div key={review.id} className="flex gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback>{review.avatar}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-sm">{review.name}</span>
-                  <span className="text-xs text-muted-foreground">{review.date}</span>
-                </div>
-                <div className="flex items-center gap-1 mb-2">
-                  {[...Array(review.rating)].map((_, i) => (
-                    <Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground">{review.comment}</p>
-              </div>
-            </div>
-          ))}
+        <div className="text-center py-8 text-muted-foreground">
+          <p>No reviews yet</p>
+          <p className="text-sm mt-1">Be the first to review this property</p>
         </div>
-        
-        <Button variant="outline" className="w-full mt-4">
-          Show all reviews
-        </Button>
       </div>
 
       {/* Location Map Placeholder */}
@@ -1355,39 +1348,64 @@ const PropertyDetails = () => {
 
       {/* Sticky Footer CTA */}
       <div className="sticky bottom-0 bg-white border-t border-border p-4 shadow-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-lg font-semibold">
-              {propertyType === 'event_center' ? 
-                (property.daily_rate ? `₦${property.daily_rate.toLocaleString()}` : 'Contact for rates') :
-               propertyType === 'shop' ? 
-                (property.monthly_rent ? `₦${property.monthly_rent.toLocaleString()}` : 'Contact for rates') :
-               propertyType === 'service' ? 
-                (property.pricing || 'Contact for rates') :
-               propertyType === 'sale' ? 
-                (property.sale_price ? `₦${property.sale_price.toLocaleString()}` : 'Contact for price') :
-               propertyType === 'shortlet' ? 
-                (property.daily_rate ? `₦${property.daily_rate.toLocaleString()}` : 'Contact for rates') :
-               `₦${property.price?.toLocaleString()}`
-              }
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {propertyType === 'event_center' ? 'per day' :
-               propertyType === 'shop' ? 'per month' :
-               propertyType === 'service' ? 'service rate' :
-               propertyType === 'sale' ? 'sale price' :
-               propertyType === 'shortlet' ? 'per night' :
-               property.duration || 'per month'}
-            </p>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-lg font-semibold">
+                {propertyType === 'event_center' ? 
+                  (property.daily_rate ? `₦${property.daily_rate.toLocaleString()}` : 'Contact for rates') :
+                 propertyType === 'shop' ? 
+                  (property.monthly_rent ? `₦${property.monthly_rent.toLocaleString()}` : 'Contact for rates') :
+                 propertyType === 'service' ? 
+                  (property.pricing || 'Contact for rates') :
+                 propertyType === 'sale' ? 
+                  (property.sale_price ? `₦${property.sale_price.toLocaleString()}` : 'Contact for price') :
+                 propertyType === 'shortlet' ? 
+                  (property.daily_rate ? `₦${property.daily_rate.toLocaleString()}` : 'Contact for rates') :
+                 `₦${property.price?.toLocaleString()}`
+                }
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {propertyType === 'event_center' ? 'per day' :
+                 propertyType === 'shop' ? 'per month' :
+                 propertyType === 'service' ? 'service rate' :
+                 propertyType === 'sale' ? 'sale price' :
+                 propertyType === 'shortlet' ? 'per night' :
+                 property.duration || 'per month'}
+              </p>
+            </div>
+            <Button size="lg" className="bg-primary hover:bg-primary-hover">
+              {propertyType === 'event_center' ? 'Book Venue' :
+               propertyType === 'shop' ? 'Contact Owner' :
+               propertyType === 'service' ? 'Book Service' :
+               propertyType === 'sale' ? 'Contact Seller' :
+               propertyType === 'shortlet' ? 'Book Now' :
+               'Contact Owner'}
+            </Button>
           </div>
-          <Button size="lg" className="bg-primary hover:bg-primary-hover">
-            {propertyType === 'event_center' ? 'Book Venue' :
-             propertyType === 'shop' ? 'Contact Owner' :
-             propertyType === 'service' ? 'Book Service' :
-             propertyType === 'sale' ? 'Contact Seller' :
-             propertyType === 'shortlet' ? 'Book Now' :
-             'Contact Owner'}
-          </Button>
+          <div className="grid grid-cols-3 gap-2">
+            <Button size="sm" variant="outline" onClick={() => navigate('/messages')}>
+              <MessageCircle className="h-4 w-4 mr-1" />
+              Message
+            </Button>
+            {property.profiles?.phone && (
+              <Button size="sm" variant="outline" onClick={() => window.open(`tel:${property.profiles.phone}`)}>
+                <Phone className="h-4 w-4 mr-1" />
+                Call
+              </Button>
+            )}
+            {property.profiles?.whatsapp_number ? (
+              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => window.open(`https://wa.me/${property.profiles.whatsapp_number.replace(/[^0-9]/g, '')}`, '_blank')}>
+                <MessageCircle className="h-4 w-4 mr-1" />
+                WhatsApp
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" disabled>
+                <MessageCircle className="h-4 w-4 mr-1" />
+                WhatsApp
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
