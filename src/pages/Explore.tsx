@@ -23,6 +23,26 @@ const Explore: React.FC = () => {
   const [shortlets, setShortlets] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState<{state: string, lga?: string} | null>(null);
+  const [locationPermission, setLocationPermission] = useState<'prompt' | 'granted' | 'denied'>('prompt');
+
+  // Request user location on mount
+  useEffect(() => {
+    const requestLocation = async () => {
+      if ('geolocation' in navigator) {
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
+          });
+          setLocationPermission('granted');
+          setUserLocation({ state: 'Lagos', lga: 'Ikeja' });
+        } catch (error) {
+          setLocationPermission('denied');
+        }
+      }
+    };
+    requestLocation();
+  }, []);
 
   // Fetch properties and shortlets from database
   useEffect(() => {
@@ -30,12 +50,12 @@ const Explore: React.FC = () => {
       try {
         // Make all queries in parallel for better performance
         const [propertiesRes, salePropertiesRes, shortletsRes, servicesRes, shopsRes, eventCentersRes] = await Promise.allSettled([
-          supabase.from('properties').select('*, property_images(image_url, is_primary)').eq('status', 'active').order('created_at', { ascending: false }),
-          supabase.from('sale_properties').select('*').eq('status', 'active').order('created_at', { ascending: false }),
-          supabase.from('shortlets').select('*').eq('status', 'active').order('created_at', { ascending: false }),
-          supabase.from('services').select('*').eq('status', 'active').order('created_at', { ascending: false }),
-          supabase.from('shops').select('*').eq('status', 'active').order('created_at', { ascending: false }),
-          supabase.from('event_centers').select('*').eq('status', 'active').order('created_at', { ascending: false })
+          supabase.from('properties').select('*, property_images(image_url, is_primary)').order('created_at', { ascending: false }),
+          supabase.from('sale_properties').select('*').order('created_at', { ascending: false }),
+          supabase.from('shortlets').select('*').order('created_at', { ascending: false }),
+          supabase.from('services').select('*').order('created_at', { ascending: false }),
+          supabase.from('shops').select('*').order('created_at', { ascending: false }),
+          supabase.from('event_centers').select('*').order('created_at', { ascending: false })
         ]);
 
         const allProperties: any[] = [];
@@ -95,6 +115,12 @@ const Explore: React.FC = () => {
         setProperties(allProperties);
         setShortlets(allShortlets);
         setServices(allServices);
+        console.log('📊 TOTAL LISTINGS:', {
+          properties: allProperties.length,
+          shortlets: allShortlets.length,
+          services: allServices.length,
+          total: allProperties.length + allShortlets.length + allServices.length
+        });
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -166,10 +192,6 @@ const Explore: React.FC = () => {
 
   // Transform database properties to component format
   const transformProperty = (prop: any) => {
-    console.log('Property images:', prop.images);
-    console.log('Property property_images:', prop.property_images);
-    console.log('Full property object:', prop);
-    
     const imageUrl = prop.images?.[0] || 
                     prop.property_images?.find((img: any) => img.is_primary)?.image_url || 
                     prop.property_images?.[0]?.image_url ||
@@ -189,11 +211,22 @@ const Explore: React.FC = () => {
 
   const popularLagosProperties = loading ? [] : properties
     .filter(prop => prop.location?.toLowerCase().includes('lagos') && prop.category === 'rent')
+    .sort(() => Math.random() - 0.5)
     .slice(0, 4)
     .map(transformProperty);
 
   const nextMonthAbuja = loading ? [] : properties
     .filter(prop => prop.location?.toLowerCase().includes('abuja') && prop.category === 'rent')
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 4)
+    .map(transformProperty);
+
+  const nearbyProperties = loading || !userLocation ? [] : properties
+    .filter(prop => {
+      const propLocation = prop.location?.toLowerCase() || '';
+      return propLocation.includes(userLocation.state.toLowerCase()) || 
+             (userLocation.lga && propLocation.includes(userLocation.lga.toLowerCase()));
+    })
     .slice(0, 4)
     .map(transformProperty);
 
@@ -412,6 +445,15 @@ const Explore: React.FC = () => {
               properties={featuredProperties}
               onPropertyClick={handlePropertyClick}
             />
+            
+            {locationPermission === 'granted' && nearbyProperties.length > 0 && (
+              <PropertySection
+                title={`Recent listings around you (${userLocation?.state}${userLocation?.lga ? ', ' + userLocation.lga : ''})`}
+                properties={propertiesWithFavorites(nearbyProperties)}
+                onPropertyClick={handlePropertyClick}
+                onFavoriteToggle={handleFavoriteToggle}
+              />
+            )}
             
             <PropertySection
               title="Recent Home Listings"

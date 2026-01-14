@@ -78,7 +78,9 @@ const EnhancedLocationInput: React.FC<EnhancedLocationInputProps> = ({
 
   // Notify parent of changes
   useEffect(() => {
-    if (selectedState && selectedCity && selectedArea) {
+    // Always notify if we have at least state, city, and area selected
+    // OR if we have detailedAddress or landmarks filled
+    if ((selectedState && selectedCity && selectedArea) || detailedAddress || landmarks) {
       onLocationChange({
         stateId: selectedState,
         cityId: selectedCity,
@@ -88,7 +90,7 @@ const EnhancedLocationInput: React.FC<EnhancedLocationInputProps> = ({
         landmarks
       });
     }
-  }, [selectedState, selectedCity, selectedArea, selectedStreet, detailedAddress, landmarks]);
+  }, [selectedState, selectedCity, selectedArea, selectedStreet, detailedAddress, landmarks, onLocationChange]);
 
   const loadStates = async () => {
     try {

@@ -28,12 +28,17 @@ import InspectionRequestDetails from "./pages/InspectionRequestDetails";
 import CategoryListing from "./pages/CategoryListing";
 import CreateListingPage from "./pages/CreateListingPage";
 import CreateServicePage from "./pages/CreateServicePage";
+import NewServiceListingForm from "./pages/NewServiceListingForm";
 import CreateRentListingPage from "./pages/CreateRentListingPage";
 import NewRentListingForm from "./pages/NewRentListingForm";
 import CreateSaleListingPage from "./pages/CreateSaleListingPage";
+import NewSaleListingForm from "./pages/NewSaleListingForm";
 import CreateShortletListingPage from "./pages/CreateShortletListingPage";
+import NewShortletListingForm from "./pages/NewShortletListingForm";
 import CreateEventCenterListingPage from "./pages/CreateEventCenterListingPage";
+import NewEventCenterListingForm from "./pages/NewEventCenterListingForm";
 import CreateShopListingPage from "./pages/CreateShopListingPage";
+import NewShopListingForm from "./pages/NewShopListingForm";
 import AdminLocationPage from "./pages/AdminLocationPage";
 import DiagnosticPage from "./pages/DiagnosticPage";
 import MapSearchPage from "./pages/MapSearchPage";
@@ -53,6 +58,7 @@ import GettingStarted from "./pages/GettingStarted";
 import PropertyListings from "./pages/PropertyListings";
 import AccountManagement from "./pages/AccountManagement";
 import EditListing from "./pages/EditListing";
+import AdminCleanup from "./pages/AdminCleanup";
 
 const queryClient = new QueryClient();
 
@@ -78,12 +84,17 @@ const App = () => (
             <Route path="/create" element={<CreateListing />} />
             <Route path="/create-listing" element={<CreateListingPage />} />
             <Route path="/create-service" element={<CreateServicePage />} />
+            <Route path="/create-service-new" element={<NewServiceListingForm />} />
             <Route path="/create-rent-listing" element={<CreateRentListingPage />} />
             <Route path="/create-rent-listing-new" element={<NewRentListingForm />} />
             <Route path="/create-sale-listing" element={<CreateSaleListingPage />} />
+            <Route path="/create-sale-listing-new" element={<NewSaleListingForm />} />
             <Route path="/create-shortlet-listing" element={<CreateShortletListingPage />} />
+            <Route path="/create-shortlet-listing-new" element={<NewShortletListingForm />} />
             <Route path="/create-event-center-listing" element={<CreateEventCenterListingPage />} />
+            <Route path="/create-event-center-listing-new" element={<NewEventCenterListingForm />} />
             <Route path="/create-shop-listing" element={<CreateShopListingPage />} />
+            <Route path="/create-shop-listing-new" element={<NewShopListingForm />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/messages/:id" element={<MessageConversation />} />
             <Route path="/property-inspection/:id" element={<PropertyInspection />} />
@@ -104,6 +115,7 @@ const App = () => (
             <Route path="/property-listings" element={<PropertyListings />} />
             <Route path="/account-management" element={<AccountManagement />} />
             <Route path="/edit-listing/:id" element={<EditListing />} />
+            <Route path="/admin-cleanup" element={<AdminCleanup />} />
             <Route path="/admin-locations" element={<AdminLocationPage />} />
             <Route path="/diagnostic" element={<DiagnosticPage />} />
             <Route path="/map-search" element={<MapSearchPage />} />

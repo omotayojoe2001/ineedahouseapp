@@ -29,12 +29,12 @@ const MyListings = () => {
       try {
         // Make all queries in parallel for better performance
         const [propertiesRes, shortletsRes, salePropertiesRes, servicesRes, shopsRes, eventCentersRes] = await Promise.allSettled([
-          supabase.from('properties').select('id, title, location, price, category, bedrooms, bathrooms, rating, images, verified, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
-          supabase.from('shortlets').select('id, title, location, daily_rate, bedrooms, bathrooms, rating, images, verified, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
-          supabase.from('sale_properties').select('id, title, location, sale_price, property_type, bedrooms, bathrooms, rating, images, verified, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
-          supabase.from('services').select('id, title, location, pricing, service_type, rating, images, verified, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
-          supabase.from('shops').select('id, title, location, monthly_rent, shop_type, rating, images, verified, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
-          supabase.from('event_centers').select('id, title, location, daily_rate, venue_type, guest_capacity, rating, images, verified, created_at').eq('user_id', user.id).order('created_at', { ascending: false })
+          supabase.from('properties').select('id, title, location, price, category, bedrooms, bathrooms, images, created_at').eq('user_id', user.id).limit(50),
+          supabase.from('shortlets').select('id, title, location, daily_rate, bedrooms, bathrooms, images, created_at').eq('user_id', user.id).limit(50),
+          supabase.from('sale_properties').select('id, title, location, sale_price, property_type, bedrooms, bathrooms, images, created_at').eq('user_id', user.id).limit(50),
+          supabase.from('services').select('id, title, location, pricing, service_type, images, created_at').eq('user_id', user.id).limit(50),
+          supabase.from('shops').select('id, title, location, monthly_rent, shop_type, images, created_at').eq('user_id', user.id).limit(50),
+          supabase.from('event_centers').select('id, title, location, daily_rate, venue_type, guest_capacity, images, created_at').eq('user_id', user.id).limit(50)
         ]);
 
         const allListings: any[] = [];
@@ -99,19 +99,25 @@ const MyListings = () => {
 
         // Process services
         if (servicesRes.status === 'fulfilled' && servicesRes.value.data) {
-          const transformed = servicesRes.value.data.map(service => ({
-            id: service.id,
-            title: service.title,
-            location: service.location,
-            price: parseFloat(service.pricing?.replace(/[^0-9.]/g, '') || '0'),
-            duration: 'service',
-            rating: service.rating || 4.5,
-            imageUrl: service.images?.[0],
-            verified: service.verified || false,
-            category: 'service',
-            badge: service.service_type,
-            created_at: service.created_at,
-          }));
+          console.log('Services data:', servicesRes.value.data);
+          const transformed = servicesRes.value.data.map(service => {
+            const priceNum = typeof service.pricing === 'string' ? parseFloat(service.pricing.replace(/[^0-9.]/g, '')) : service.pricing;
+            console.log('Service transform:', { title: service.title, pricing: service.pricing, priceNum });
+            return {
+              id: service.id,
+              title: service.title,
+              location: service.location,
+              price: priceNum || 0,
+              duration: 'service',
+              rating: 4.5,
+              imageUrl: service.images?.[0] || '/placeholder.svg',
+              verified: false,
+              category: 'service',
+              badge: service.service_type,
+              created_at: service.created_at,
+            };
+          });
+          console.log('Transformed services:', transformed);
           allListings.push(...transformed);
         }
 
