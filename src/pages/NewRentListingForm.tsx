@@ -389,7 +389,7 @@ const NewRentListingForm = () => {
       case 1:
         return (
           <div className="max-w-2xl mx-auto px-6 py-12">
-            <h1 className="text-5xl font-semibold mb-12">What type of property are you renting?</h1>
+            <h1 className="text-5xl font-semibold mb-12 text-foreground">What type of property are you renting?</h1>
             <div className="space-y-4">
               {propertyTypes.map((type) => {
                 const Icon = type.icon;
@@ -398,14 +398,14 @@ const NewRentListingForm = () => {
                     key={type.id}
                     onClick={() => setFormData(prev => ({ ...prev, propertyType: type.id }))}
                     className={`w-full p-6 rounded-xl border-2 transition-all text-left ${
-                      formData.propertyType === type.id ? 'border-gray-900 bg-gray-50' : 'border-gray-300 hover:border-gray-900'
+                      formData.propertyType === type.id ? 'border-foreground bg-muted' : 'border-border hover:border-foreground'
                     }`}
                   >
                     <div className="flex items-center gap-4">
-                      <Icon size={32} />
+                      <Icon size={32} className="text-foreground" />
                       <div>
-                        <div className="font-semibold text-lg">{type.label}</div>
-                        <div className="text-gray-600 text-sm">{type.desc}</div>
+                        <div className="font-semibold text-lg text-foreground">{type.label}</div>
+                        <div className="text-muted-foreground text-sm">{type.desc}</div>
                       </div>
                     </div>
                   </button>
@@ -418,17 +418,17 @@ const NewRentListingForm = () => {
       case 2:
         return (
           <div className="max-w-2xl mx-auto px-6 py-12">
-            <h1 className="text-5xl font-semibold mb-12">What specific type?</h1>
+            <h1 className="text-5xl font-semibold mb-12 text-foreground">What specific type?</h1>
             <div className="grid grid-cols-2 gap-4">
               {formData.propertyType && subTypes[formData.propertyType] ? subTypes[formData.propertyType].map((type) => (
                 <button
                   key={type}
                   onClick={() => setFormData(prev => ({ ...prev, propertySubType: type }))}
                   className={`p-6 rounded-xl border-2 transition-all ${
-                    formData.propertySubType === type ? 'border-gray-900 bg-gray-50' : 'border-gray-300 hover:border-gray-900'
+                    formData.propertySubType === type ? 'border-foreground bg-muted' : 'border-border hover:border-foreground'
                   }`}
                 >
-                  <div className="font-medium text-lg">{type}</div>
+                  <div className="font-medium text-lg text-foreground">{type}</div>
                 </button>
               )) : (
                 <div className="col-span-2 text-center text-gray-500 py-12">
@@ -1108,21 +1108,21 @@ const NewRentListingForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="fixed top-0 left-0 right-0 bg-white border-b z-50">
+    <div className="min-h-screen bg-background">
+      <div className="fixed top-0 left-0 right-0 bg-card border-b border-border z-50">
         <div className="flex items-center justify-between px-6 py-4">
           <button onClick={() => step > 1 ? setStep(step - 1) : navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full">
             <ArrowLeft size={20} />
           </button>
           <div className="flex-1 mx-8">
-            <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
-              <div className="h-full bg-gray-900 transition-all" style={{ width: `${(step / 17) * 100}%` }} />
+            <div className="h-1 bg-muted rounded-full overflow-hidden">
+              <div className="h-full bg-foreground transition-all" style={{ width: `${(step / 17) * 100}%` }} />
             </div>
           </div>
         </div>
       </div>
       <div className="pt-20 pb-32">{renderStep()}</div>
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t">
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border">
         <div className="flex items-center justify-between px-6 py-4">
           <button onClick={() => step > 1 && setStep(step - 1)} className="px-6 py-3 font-medium underline" disabled={loading}>Back</button>
           <button 

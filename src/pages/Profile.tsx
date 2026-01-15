@@ -16,7 +16,9 @@ import {
   LogOut,
   ChevronRight,
   Star,
-  Award
+  Award,
+  Moon,
+  Sun
 } from 'lucide-react';
 
 const Profile = () => {
@@ -25,6 +27,20 @@ const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState({ listings: 0, saved: 0, messages: 0 });
   const [loading, setLoading] = useState(true);
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -242,6 +258,23 @@ const Profile = () => {
 
         {/* Menu Items */}
         <div className="px-4 py-2">
+          {/* Dark Mode Toggle */}
+          <div className="mb-4">
+            <button
+              onClick={() => setIsDark(!isDark)}
+              className="w-full flex items-center p-4 rounded-xl hover:bg-muted transition-colors group"
+            >
+              <div className={`p-2 rounded-lg bg-muted ${isDark ? 'text-yellow-500' : 'text-blue-500'}`}>
+                {isDark ? <Sun size={20} /> : <Moon size={20} />}
+              </div>
+              <div className="flex-1 ml-4 text-left">
+                <h3 className="font-medium text-foreground">{isDark ? 'Light Mode' : 'Dark Mode'}</h3>
+                <p className="text-sm text-muted-foreground">Switch to {isDark ? 'light' : 'dark'} theme</p>
+              </div>
+              <ChevronRight size={20} className="text-muted-foreground group-hover:text-foreground transition-colors" />
+            </button>
+          </div>
+          
           {/* Inspector Section - Dynamic based on status */}
           <div className="mb-4">
             {(() => {
@@ -249,21 +282,21 @@ const Profile = () => {
               
               if (isInspector) {
                 return (
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
+                  <div className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border border-primary/20 rounded-xl p-4">
                     <div className="flex items-start gap-3">
-                      <div className="bg-green-100 p-2 rounded-full">
-                        <Shield className="h-5 w-5 text-green-600" />
+                      <div className="bg-primary/20 p-2 rounded-full">
+                        <Shield className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-green-900">Inspector Dashboard</h3>
-                        <p className="text-sm text-green-700 mt-1">
+                        <h3 className="font-semibold text-foreground">Inspector Dashboard</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
                           Manage your inspections and earnings
                         </p>
-                        <p className="text-xs text-green-600 mt-2">
+                        <p className="text-xs text-muted-foreground mt-2">
                           You've earned ₦45,000 this month
                         </p>
                         <button 
-                          className="mt-3 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                          className="mt-3 bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                           onClick={() => navigate('/inspector-dashboard')}
                         >
                           View Dashboard
@@ -274,17 +307,17 @@ const Profile = () => {
                 );
               } else {
                 return (
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
+                  <div className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border border-primary/20 rounded-xl p-4">
                     <div className="flex items-start gap-3">
-                      <div className="bg-green-100 p-2 rounded-full">
-                        <Shield className="h-5 w-5 text-green-600" />
+                      <div className="bg-primary/20 p-2 rounded-full">
+                        <Shield className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-green-900">Become a Property Inspector</h3>
-                        <p className="text-sm text-green-700 mt-1">
+                        <h3 className="font-semibold text-foreground">Become a Property Inspector</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
                           Earn money by helping people verify properties in your area
                         </p>
-                        <p className="text-xs text-green-600 mt-2">
+                        <p className="text-xs text-muted-foreground mt-2">
                           Earn ₦5,000 - ₦15,000 per inspection
                         </p>
                         <button 

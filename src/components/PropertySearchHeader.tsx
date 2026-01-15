@@ -118,48 +118,48 @@ const PropertySearchHeader = () => {
   };
 
   return (
-    <div className="relative bg-white border-b border-gray-200 p-4">
+    <div className="relative bg-card border-b border-border p-4">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-full border border-gray-300 shadow-lg p-2 flex items-center">
+        <div className="bg-card rounded-full border border-border shadow-lg p-2 flex items-center">
           {/* Where */}
           <div 
             className={`flex-1 px-6 py-3 rounded-full cursor-pointer transition-all ${
-              activeField === 'where' ? 'bg-white shadow-lg' : 'hover:bg-gray-50'
+              activeField === 'where' ? 'bg-card shadow-lg' : 'hover:bg-muted'
             }`}
             onClick={() => setActiveField(activeField === 'where' ? null : 'where')}
           >
-            <div className="text-xs font-semibold text-gray-900">Where</div>
-            <div className="text-sm text-gray-500">
+            <div className="text-xs font-semibold text-foreground">Where</div>
+            <div className="text-sm text-muted-foreground">
               {searchData.location || 'Search locations'}
             </div>
           </div>
 
-          <div className="w-px h-8 bg-gray-300"></div>
+          <div className="w-px h-8 bg-border"></div>
 
           {/* When */}
           <div 
             className={`flex-1 px-6 py-3 rounded-full cursor-pointer transition-all ${
-              activeField === 'when' ? 'bg-white shadow-lg' : 'hover:bg-gray-50'
+              activeField === 'when' ? 'bg-card shadow-lg' : 'hover:bg-muted'
             }`}
             onClick={() => setActiveField(activeField === 'when' ? null : 'when')}
           >
-            <div className="text-xs font-semibold text-gray-900">When</div>
-            <div className="text-sm text-gray-500">
+            <div className="text-xs font-semibold text-foreground">When</div>
+            <div className="text-sm text-muted-foreground">
               {searchData.availableFrom || 'Available from'}
             </div>
           </div>
 
-          <div className="w-px h-8 bg-gray-300"></div>
+          <div className="w-px h-8 bg-border"></div>
 
           {/* What */}
           <div 
             className={`flex-1 px-6 py-3 rounded-full cursor-pointer transition-all ${
-              activeField === 'what' ? 'bg-white shadow-lg' : 'hover:bg-gray-50'
+              activeField === 'what' ? 'bg-card shadow-lg' : 'hover:bg-muted'
             }`}
             onClick={() => setActiveField(activeField === 'what' ? null : 'what')}
           >
-            <div className="text-xs font-semibold text-gray-900">What</div>
-            <div className="text-sm text-gray-500">
+            <div className="text-xs font-semibold text-foreground">What</div>
+            <div className="text-sm text-muted-foreground">
               {propertyTypes.find(t => t.id === searchData.propertyType)?.label || 'Property type'}
             </div>
           </div>
@@ -176,7 +176,7 @@ const PropertySearchHeader = () => {
 
       {/* Dropdown Panels */}
       {activeField && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-gray-200 p-8 z-50 max-w-4xl mx-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-3xl shadow-2xl border border-border p-8 z-50 max-w-4xl mx-auto">
           
           {/* Where Panel */}
           {activeField === 'where' && (
@@ -188,7 +188,7 @@ const PropertySearchHeader = () => {
                 <input
                   type="text"
                   placeholder="Search cities, states, or areas..."
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full p-3 border border-border bg-muted rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                   onChange={(e) => {
                     setSearchData(prev => ({ ...prev, location: e.target.value }));
                   }}
@@ -203,12 +203,12 @@ const PropertySearchHeader = () => {
                       handleDestinationSelect(dest);
                       setActiveField(null); // Auto-close after selection
                     }}
-                    className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 text-left transition-colors"
+                    className="flex items-center gap-4 p-4 rounded-xl hover:bg-muted text-left transition-colors"
                   >
-                    <div className="text-gray-600">{dest.icon}</div>
+                    <div className="text-muted-foreground">{dest.icon}</div>
                     <div>
-                      <div className="font-medium text-gray-900">{dest.name}</div>
-                      <div className="text-sm text-gray-500">{dest.description}</div>
+                      <div className="font-medium text-foreground">{dest.name}</div>
+                      <div className="text-sm text-muted-foreground">{dest.description}</div>
                     </div>
                   </button>
                 ))}
@@ -237,7 +237,7 @@ const PropertySearchHeader = () => {
                     const prevMonth = new Date();
                     prevMonth.setMonth(prevMonth.getMonth() - 1);
                   }}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="p-2 hover:bg-muted rounded-lg"
                 >
                   ←
                 </button>
@@ -249,7 +249,7 @@ const PropertySearchHeader = () => {
                     const nextMonth = new Date();
                     nextMonth.setMonth(nextMonth.getMonth() + 1);
                   }}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="p-2 hover:bg-muted rounded-lg"
                 >
                   →
                 </button>
@@ -257,7 +257,7 @@ const PropertySearchHeader = () => {
               
               <div className="grid grid-cols-7 gap-2 mb-4">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <div key={day} className="text-center text-sm font-medium text-gray-500 p-2">
+                  <div key={day} className="text-center text-sm font-medium text-muted-foreground p-2">
                     {day}
                   </div>
                 ))}
@@ -270,7 +270,7 @@ const PropertySearchHeader = () => {
                     className={`p-2 text-sm rounded-lg transition-colors ${
                       date.toISOString().split('T')[0] === searchData.availableFrom
                         ? 'bg-primary text-white'
-                        : 'hover:bg-gray-100'
+                        : 'hover:bg-muted'
                     }`}
                   >
                     {date.getDate()}
@@ -295,10 +295,10 @@ const PropertySearchHeader = () => {
                     className={`p-3 rounded-lg border text-left transition-colors flex items-center gap-3 ${
                       searchData.propertyType === type.id
                         ? 'bg-primary text-white border-primary'
-                        : 'border-gray-300 hover:border-gray-400'
+                        : 'border-border hover:border-foreground'
                     }`}
                   >
-                    <div className={searchData.propertyType === type.id ? 'text-white' : 'text-gray-600'}>
+                    <div className={searchData.propertyType === type.id ? 'text-white' : 'text-muted-foreground'}>
                       {type.icon}
                     </div>
                     <div className="font-medium">{type.label}</div>
@@ -316,7 +316,7 @@ const PropertySearchHeader = () => {
                       className={`px-4 py-2 rounded-lg border text-sm transition-colors ${
                         searchData.priceRange === range.id
                           ? 'bg-primary text-white border-primary'
-                          : 'border-gray-300 hover:border-gray-400'
+                          : 'border-border hover:border-foreground'
                       }`}
                     >
                       {range.label}

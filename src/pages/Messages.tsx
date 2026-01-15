@@ -10,6 +10,9 @@ const Messages = () => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -102,11 +105,67 @@ const Messages = () => {
     return date.toLocaleDateString();
   };
 
+  const filteredConversations = conversations
+    .filter(conv => filter === 'all' || conv.unreadCount > 0)
+    .filter(conv => conv.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
   return (
     <Layout activeTab="messages">
       <div className="bg-background min-h-screen desktop-nav-spacing">
-        <div className="px-4 pt-12 pb-4 border-b border-border">
-          <h1 className="text-2xl font-bold mb-4">Messages</h1>
+        <div className="px-4 py-3 border-b border-border">
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-xl font-bold">Messages</h1>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setShowSearch(!showSearch)}
+                className="p-2 hover:bg-muted rounded-full"
+              >
+                <Search size={20} />
+              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setFilter(filter === 'all' ? 'unread' : 'all')}
+                  className="p-2 hover:bg-muted rounded-full"
+                >
+                  <MessageCircle size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Search Bar */}
+          {showSearch && (
+            <div className="mb-3">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search messages..."
+                className="w-full px-3 py-2 bg-muted rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                autoFocus
+              />
+            </div>
+          )}
+          
+          {/* Filter Chips */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                filter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilter('unread')}
+              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                filter === 'unread' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              Unread
+            </button>
+          </div>
         </div>
 
         <div className="divide-y divide-border">
@@ -121,7 +180,7 @@ const Messages = () => {
               <p className="text-muted-foreground">No messages yet</p>
             </div>
           ) : (
-            conversations.map((conv) => (
+            filteredConversations.map((conv) => (
               <div
                 key={conv.partnerId}
                 className="px-4 py-4 hover:bg-muted/20 cursor-pointer"
@@ -129,25 +188,25 @@ const Messages = () => {
               >
                 <div className="flex items-start gap-3">
                   {conv.avatar ? (
-                    <img src={conv.avatar} alt={conv.name} className="w-12 h-12 rounded-full object-cover" />
+                    <img src={conv.avatar} alt={conv.name} className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
-                      <span className="text-white font-semibold">{conv.name[0]}</span>
+                    <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-semibold text-sm">{conv.name[0]}</span>
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-1">
-                      <h3 className="font-semibold">{conv.name}</h3>
+                    <div className="flex justify-between items-start mb-0.5">
+                      <h3 className="font-medium text-sm">{conv.name}</h3>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">{formatTime(conv.lastMessageTime)}</span>
                         {conv.unreadCount > 0 && (
-                          <span className="bg-primary text-primary-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                          <span className="bg-primary text-primary-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
                             {conv.unreadCount}
                           </span>
                         )}
                       </div>
                     </div>
-                    <p className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-medium' : 'text-muted-foreground'}`}>
+                    <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'font-medium' : 'text-muted-foreground'}`}>
                       {conv.lastMessage}
                     </p>
                   </div>
