@@ -21,7 +21,24 @@ const CategoryListing = () => {
         const allProperties = [];
 
         // Fetch based on category
-        if (category?.includes('home') || category?.includes('rent')) {
+        if (category?.includes('around-you') || category?.includes('nearby')) {
+          // Fetch all properties for nearby listings
+          const [propertiesRes, saleRes, shortletsRes] = await Promise.allSettled([
+            supabase.from('properties').select('*').order('created_at', { ascending: false }).limit(50),
+            supabase.from('sale_properties').select('*').order('created_at', { ascending: false }).limit(50),
+            supabase.from('shortlets').select('*').order('created_at', { ascending: false }).limit(50)
+          ]);
+          if (propertiesRes.status === 'fulfilled' && propertiesRes.value.data) {
+            allProperties.push(...propertiesRes.value.data.map(p => ({ ...p, price: p.price, duration: 'month', category: 'rent' })));
+          }
+          if (saleRes.status === 'fulfilled' && saleRes.value.data) {
+            allProperties.push(...saleRes.value.data.map(p => ({ ...p, price: p.sale_price, duration: 'total', category: 'sale' })));
+          }
+          if (shortletsRes.status === 'fulfilled' && shortletsRes.value.data) {
+            allProperties.push(...shortletsRes.value.data.map(s => ({ ...s, price: s.daily_rate, duration: 'night', category: 'shortlet' })));
+          }
+        }
+        else if (category?.includes('home') || category?.includes('rent')) {
           // Fetch rental properties
           const [propertiesRes] = await Promise.allSettled([
             supabase.from('properties').select('*').eq('status', 'active').eq('category', 'rent').order('created_at', { ascending: false })
@@ -113,6 +130,7 @@ const CategoryListing = () => {
   }, [category]);
 
   const getCategoryTitle = () => {
+    if (category?.includes('around-you') || category?.includes('nearby')) return 'Recent Listings Around You';
     if (category?.includes('home')) return 'Recent Home Listings';
     if (category?.includes('shortlet')) return 'Recent Shortlet Listings';
     if (category?.includes('house')) return 'Recent Houses for Sale';

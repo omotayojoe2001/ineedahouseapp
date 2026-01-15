@@ -3,8 +3,10 @@ import Layout from '../components/Layout';
 import { Heart, Filter, Grid, List, X } from 'lucide-react';
 import PropertyCard from '../components/PropertyCard';
 import { PropertyService } from '../services/propertyService';
+import { useToast } from '@/hooks/use-toast';
 
 const Saved = () => {
+  const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [priceFilter, setPriceFilter] = useState('');
@@ -25,6 +27,36 @@ const Saved = () => {
       console.error('Error loading saved properties:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFavoriteToggle = async (propertyId: string) => {
+    try {
+      // Determine listing type
+      const property = savedProperties.find(p => p.id === propertyId);
+      let listingType: 'property' | 'sale_property' | 'shortlet' | 'shop' | 'event_center' | 'service' = 'property';
+      if (property?.category === 'sale') listingType = 'sale_property';
+      else if (property?.category === 'shortlet') listingType = 'shortlet';
+      else if (property?.category === 'shop') listingType = 'shop';
+      else if (property?.category === 'event_center') listingType = 'event_center';
+      else if (property?.category === 'service') listingType = 'service';
+      
+      await PropertyService.toggleFavorite(propertyId, listingType);
+      
+      // Remove from local state immediately
+      setSavedProperties(prev => prev.filter(p => p.id !== propertyId));
+      
+      toast({
+        title: "Property Removed",
+        description: "Removed from your saved properties",
+      });
+    } catch (error) {
+      console.error('Error removing favorite:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove property",
+        variant: "destructive",
+      });
     }
   };
 
@@ -127,8 +159,10 @@ const Saved = () => {
               {filteredProperties.map((property) => (
                 <PropertyCard 
                   key={property.id} 
-                  {...property} 
+                  {...property}
+                  isFavorite={true}
                   isShortlet={property.category === 'shortlet' || property.duration === 'day'}
+                  onFavoriteToggle={() => handleFavoriteToggle(property.id)}
                 />
               ))}
             </div>

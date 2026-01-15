@@ -220,33 +220,36 @@ export class PropertyService {
     }
   }
 
-  static async toggleFavorite(propertyId: string) {
+  static async toggleFavorite(listingId: string, listingType: 'property' | 'sale_property' | 'shortlet' | 'shop' | 'event_center' | 'service' = 'property') {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
       const { data: existing } = await supabase
-        .from('property_favorites')
+        .from('favorites')
         .select('id')
         .eq('user_id', user.id)
-        .eq('property_id', propertyId)
+        .eq('listing_id', listingId)
+        .eq('listing_type', listingType)
         .single();
 
       if (existing) {
         const { error } = await supabase
-          .from('property_favorites')
+          .from('favorites')
           .delete()
           .eq('user_id', user.id)
-          .eq('property_id', propertyId);
+          .eq('listing_id', listingId)
+          .eq('listing_type', listingType);
 
         if (error) throw error;
         return false;
       } else {
         const { error } = await supabase
-          .from('property_favorites')
+          .from('favorites')
           .insert({
             user_id: user.id,
-            property_id: propertyId,
+            listing_id: listingId,
+            listing_type: listingType,
           });
 
         if (error) throw error;
@@ -263,17 +266,34 @@ export class PropertyService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      const { data, error } = await supabase
-        .from('property_favorites')
-        .select(`
-          properties!inner(
-            *
-          )
-        `)
+      const { data: favs, error } = await supabase
+        .from('favorites')
+        .select('listing_id, listing_type')
         .eq('user_id', user.id);
 
       if (error) throw error;
-      return data?.map(item => item.properties) || [];
+      if (!favs || favs.length === 0) return [];
+
+      // Fetch all listings from different tables
+      const results = await Promise.all([
+        supabase.from('properties').select('*').in('id', favs.filter(f => f.listing_type === 'property').map(f => f.listing_id)),
+        supabase.from('sale_properties').select('*').in('id', favs.filter(f => f.listing_type === 'sale_property').map(f => f.listing_id)),
+        supabase.from('shortlets').select('*').in('id', favs.filter(f => f.listing_type === 'shortlet').map(f => f.listing_id)),
+        supabase.from('shops').select('*').in('id', favs.filter(f => f.listing_type === 'shop').map(f => f.listing_id)),
+        supabase.from('event_centers').select('*').in('id', favs.filter(f => f.listing_type === 'event_center').map(f => f.listing_id)),
+        supabase.from('services').select('*').in('id', favs.filter(f => f.listing_type === 'service').map(f => f.listing_id)),
+      ]);
+
+      const allListings = [
+        ...(results[0].data || []).map(p => ({ ...p, category: 'rent', price: p.price, duration: 'month', imageUrl: p.images?.[0] })),
+        ...(results[1].data || []).map(p => ({ ...p, category: 'sale', price: p.sale_price, duration: 'total', imageUrl: p.images?.[0] })),
+        ...(results[2].data || []).map(p => ({ ...p, category: 'shortlet', price: p.daily_rate, duration: 'day', imageUrl: p.images?.[0] })),
+        ...(results[3].data || []).map(p => ({ ...p, category: 'shop', price: p.monthly_rent, duration: 'month', imageUrl: p.images?.[0] })),
+        ...(results[4].data || []).map(p => ({ ...p, category: 'event_center', price: p.daily_rate, duration: 'day', imageUrl: p.images?.[0] })),
+        ...(results[5].data || []).map(p => ({ ...p, category: 'service', price: typeof p.pricing === 'string' ? parseFloat(p.pricing.replace(/[^0-9.]/g, '')) : p.pricing, duration: 'service', imageUrl: p.images?.[0] })),
+      ];
+
+      return allListings;
     } catch (error) {
       console.error('Error fetching favorites:', error);
       throw error;

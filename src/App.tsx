@@ -58,6 +58,7 @@ import GettingStarted from "./pages/GettingStarted";
 import PropertyListings from "./pages/PropertyListings";
 import AccountManagement from "./pages/AccountManagement";
 import EditListing from "./pages/EditListing";
+import UserProfile from "./pages/UserProfile";
 import AdminCleanup from "./pages/AdminCleanup";
 
 const queryClient = new QueryClient();
@@ -115,6 +116,7 @@ const App = () => (
             <Route path="/property-listings" element={<PropertyListings />} />
             <Route path="/account-management" element={<AccountManagement />} />
             <Route path="/edit-listing/:id" element={<EditListing />} />
+            <Route path="/user/:id" element={<UserProfile />} />
             <Route path="/admin-cleanup" element={<AdminCleanup />} />
             <Route path="/admin-locations" element={<AdminLocationPage />} />
             <Route path="/diagnostic" element={<DiagnosticPage />} />

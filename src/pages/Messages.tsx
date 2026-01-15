@@ -1,234 +1,155 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { Search, MoreHorizontal, CheckCheck, MessageCircle, Circle } from 'lucide-react';
+import { Search, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 
 const Messages = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
   const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
 
     const fetchConversations = async () => {
-      try {
-        // First get conversations
-        const { data: conversationsData, error: conversationsError } = await supabase
-          .from('conversations')
-          .select('*')
-          .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
-          .order('last_message_at', { ascending: false });
+      console.log('📥 Fetching conversations for user:', user.id);
+      
+      // Get all messages where user is sender or recipient
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+        .order('created_at', { ascending: false });
 
-        if (conversationsError) throw conversationsError;
-
-        // Get all unique participant IDs
-        const participantIds = new Set<string>();
-        conversationsData?.forEach(conv => {
-          participantIds.add(conv.participant_1);
-          participantIds.add(conv.participant_2);
-        });
-
-        // Fetch profiles for all participants
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, avatar_url')
-          .in('id', Array.from(participantIds));
-
-        // Create a map of profiles
-        const profilesMap = new Map();
-        profilesData?.forEach(profile => {
-          profilesMap.set(profile.id, profile);
-        });
-
-        // Get messages for each conversation
-        const conversationIds = conversationsData?.map(conv => conv.id) || [];
-        const { data: messagesData } = await supabase
-          .from('messages')
-          .select('*')
-          .in('conversation_id', conversationIds)
-          .order('created_at', { ascending: false });
-
-        // Group messages by conversation
-        const messagesByConversation = new Map();
-        messagesData?.forEach(message => {
-          if (!messagesByConversation.has(message.conversation_id)) {
-            messagesByConversation.set(message.conversation_id, []);
-          }
-          messagesByConversation.get(message.conversation_id).push(message);
-        });
-
-        const processedConversations = (conversationsData || []).map(conv => {
-          const otherParticipantId = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
-          const otherParticipant = profilesMap.get(otherParticipantId);
-          const conversationMessages = messagesByConversation.get(conv.id) || [];
-          const lastMessage = conversationMessages[0];
-          const unreadMessages = conversationMessages.filter(msg => 
-            msg.sender_id !== user.id && !msg.read_at
-          ).length;
-
-          return {
-            id: conv.id,
-            name: `${otherParticipant?.first_name || ''} ${otherParticipant?.last_name || ''}`.trim() || 'Unknown User',
-            avatar: otherParticipant?.avatar_url,
-            lastMessage: lastMessage?.content || 'No messages yet',
-            timestamp: lastMessage ? formatTimestamp(lastMessage.created_at) : '',
-            unread: unreadMessages > 0,
-            unreadCount: unreadMessages,
-            property_id: conv.property_id,
-            property_type: conv.property_type,
-          };
-        });
-
-        setConversations(processedConversations);
-        setUnreadCount(processedConversations.reduce((sum, conv) => sum + conv.unreadCount, 0));
-      } catch (error) {
-        console.error('Error fetching conversations:', error);
-        toast({ title: 'Error', description: 'Failed to load conversations', variant: 'destructive' });
-      } finally {
+      if (error) {
+        console.error('❌ Error fetching messages:', error);
         setLoading(false);
+        return;
       }
+
+      console.log('📨 Total messages:', messages?.length);
+
+      // Group by conversation partner
+      const conversationMap = new Map();
+      messages?.forEach(msg => {
+        const partnerId = msg.sender_id === user.id ? msg.recipient_id : msg.sender_id;
+        const existing = conversationMap.get(partnerId);
+        const isUnread = msg.recipient_id === user.id && !msg.read;
+        
+        if (!existing) {
+          conversationMap.set(partnerId, {
+            partnerId,
+            lastMessage: msg.message,
+            lastMessageTime: msg.created_at,
+            unreadCount: isUnread ? 1 : 0,
+          });
+        } else if (isUnread) {
+          existing.unreadCount++;
+        }
+      });
+
+      // Fetch profiles for all partners
+      const partnerIds = Array.from(conversationMap.keys());
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name, full_name, avatar_url')
+        .in('user_id', partnerIds);
+
+      console.log('👥 Profiles fetched:', profiles?.length);
+
+      const conversationsList = Array.from(conversationMap.values()).map(conv => {
+        const profile = profiles?.find(p => p.user_id === conv.partnerId);
+        return {
+          ...conv,
+          name: profile?.full_name || `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'User',
+          avatar: profile?.avatar_url,
+        };
+      });
+
+      console.log('💬 Conversations:', conversationsList.length);
+      setConversations(conversationsList);
+      setLoading(false);
     };
 
     fetchConversations();
 
-    // Subscribe to real-time updates
-    const conversationsSubscription = supabase
-      .channel('conversations')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'conversations' },
-        () => fetchConversations()
-      )
-      .subscribe();
-
-    const messagesSubscription = supabase
-      .channel('messages')
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        () => fetchConversations()
-      )
+    // Subscribe to new messages
+    const channel = supabase
+      .channel('messages-list')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
+        console.log('🔔 New message received, refreshing list');
+        fetchConversations();
+      })
       .subscribe();
 
     return () => {
-      conversationsSubscription.unsubscribe();
-      messagesSubscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
-  }, [user, toast]);
+  }, [user]);
 
-  const formatTimestamp = (timestamp: string) => {
+  const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    return `${Math.floor(diffInMinutes / 1440)}d ago`;
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (minutes < 1440) return `${Math.floor(minutes / 60)}h ago`;
+    return date.toLocaleDateString();
   };
-
-  const filteredConversations = conversations.filter(conv =>
-    conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <Layout activeTab="messages">
       <div className="bg-background min-h-screen desktop-nav-spacing">
-        {/* Header */}
         <div className="px-4 pt-12 pb-4 border-b border-border">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-foreground">Messages</h1>
-              {unreadCount > 0 && (
-                <div className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full min-w-[20px] text-center">
-                  {unreadCount}
-                </div>
-              )}
-            </div>
-            <button className="p-2 rounded-lg hover:bg-muted transition-colors">
-              <MoreHorizontal size={20} className="text-muted-foreground" />
-            </button>
-          </div>
-          
-          {/* Search */}
-          <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search messages..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-10 pl-10 pr-4 rounded-full border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-          </div>
+          <h1 className="text-2xl font-bold mb-4">Messages</h1>
         </div>
 
-        {/* Messages List */}
         <div className="divide-y divide-border">
           {loading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p>Loading conversations...</p>
+              <p>Loading...</p>
             </div>
-          ) : filteredConversations.length === 0 ? (
+          ) : conversations.length === 0 ? (
             <div className="text-center py-12">
               <MessageCircle size={48} className="text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No messages yet</h3>
-              <p className="text-muted-foreground">Start a conversation with property owners and agents!</p>
+              <p className="text-muted-foreground">No messages yet</p>
             </div>
           ) : (
-            filteredConversations.map((conversation) => (
-              <div 
-                key={conversation.id} 
-                className="px-4 py-4 hover:bg-muted/20 transition-colors cursor-pointer"
-                onClick={() => navigate(`/messages/${conversation.id}`)}
+            conversations.map((conv) => (
+              <div
+                key={conv.partnerId}
+                className="px-4 py-4 hover:bg-muted/20 cursor-pointer"
+                onClick={() => navigate(`/messages/${conv.partnerId}`)}
               >
-                <div className="flex items-start space-x-3">
-                  {/* Avatar */}
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                      {conversation.avatar ? (
-                        <img src={conversation.avatar} alt={conversation.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-lg font-semibold text-muted-foreground">
-                          {conversation.name.charAt(0)}
-                        </span>
-                      )}
+                <div className="flex items-start gap-3">
+                  {conv.avatar ? (
+                    <img src={conv.avatar} alt={conv.name} className="w-12 h-12 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
+                      <span className="text-white font-semibold">{conv.name[0]}</span>
                     </div>
-                    {conversation.unread && (
-                      <Circle size={12} className="absolute -top-1 -right-1 text-primary fill-current" />
-                    )}
-                  </div>
-                  
-                  {/* Message Content */}
+                  )}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold text-foreground truncate">{conversation.name}</h3>
+                    <div className="flex justify-between items-start mb-1">
+                      <h3 className="font-semibold">{conv.name}</h3>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">{conversation.timestamp}</span>
-                        {conversation.unreadCount > 0 && (
-                          <div className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                            {conversation.unreadCount}
-                          </div>
+                        <span className="text-xs text-muted-foreground">{formatTime(conv.lastMessageTime)}</span>
+                        {conv.unreadCount > 0 && (
+                          <span className="bg-primary text-primary-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                            {conv.unreadCount}
+                          </span>
                         )}
                       </div>
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <p className={`text-sm truncate ${conversation.unread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                        {conversation.lastMessage}
-                      </p>
-                      {!conversation.unread && (
-                        <CheckCheck size={16} className="text-primary ml-2 flex-shrink-0" />
-                      )}
-                    </div>
+                    <p className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-medium' : 'text-muted-foreground'}`}>
+                      {conv.lastMessage}
+                    </p>
                   </div>
                 </div>
               </div>

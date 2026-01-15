@@ -93,11 +93,18 @@ const Profile = () => {
           totalSaved += count || 0;
         } catch (error) { console.log('Shortlet favorites table not accessible'); }
 
+        // Unread messages
+        let unreadMessages = 0;
+        try {
+          const { count } = await supabase.from('messages').select('id', { count: 'exact' }).eq('recipient_id', user.id).eq('read', false);
+          unreadMessages = count || 0;
+        } catch (error) { console.log('Messages table not accessible'); }
+
         setProfile(profileData);
         setStats({
           listings: totalListings,
           saved: totalSaved,
-          messages: 0 // Placeholder
+          messages: unreadMessages
         });
       } catch (error) {
         console.error('Error:', error);
@@ -195,9 +202,17 @@ const Profile = () => {
           <div className="text-center">
             {/* Profile Picture */}
             <div className="relative inline-block mb-4">
-              <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center">
-                <User size={32} className="text-primary-foreground" />
-              </div>
+              {profile?.avatar_url ? (
+                <img 
+                  src={profile.avatar_url} 
+                  alt="Profile" 
+                  className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center border-4 border-white shadow-lg">
+                  <User size={32} className="text-primary-foreground" />
+                </div>
+              )}
               <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 rounded-full border-4 border-background flex items-center justify-center">
                 <Award size={16} className="text-white" />
               </div>

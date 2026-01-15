@@ -35,7 +35,30 @@ const Explore: React.FC = () => {
             navigator.geolocation.getCurrentPosition(resolve, reject);
           });
           setLocationPermission('granted');
-          setUserLocation({ state: 'Lagos', lga: 'Ikeja' });
+          
+          // Use Google Geocoding API to get location name from coordinates
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
+          try {
+            const response = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${import.meta.env.VITE_GOOGLE_PLACES_API_KEY}`
+            );
+            const data = await response.json();
+            
+            if (data.results && data.results[0]) {
+              const addressComponents = data.results[0].address_components;
+              const state = addressComponents.find((c: any) => c.types.includes('administrative_area_level_1'))?.long_name || 'Lagos';
+              const lga = addressComponents.find((c: any) => c.types.includes('administrative_area_level_2'))?.long_name;
+              
+              setUserLocation({ state, lga });
+            } else {
+              setUserLocation({ state: 'Lagos', lga: 'Ikeja' });
+            }
+          } catch (error) {
+            console.error('Geocoding error:', error);
+            setUserLocation({ state: 'Lagos', lga: 'Ikeja' });
+          }
         } catch (error) {
           setLocationPermission('denied');
         }
@@ -240,6 +263,19 @@ const Explore: React.FC = () => {
     .slice(0, 4)
     .map(transformProperty);
 
+  const recentShortletListings = loading ? [] : shortlets
+    .slice(0, 4)
+    .map(shortlet => ({
+      id: shortlet.id,
+      title: shortlet.title,
+      price: shortlet.daily_rate,
+      duration: '/ day',
+      rating: shortlet.rating || 4.5,
+      imageUrl: shortlet.images?.[0] || '/placeholder.svg',
+      location: shortlet.location,
+      badge: shortlet.featured ? 'Featured' : undefined,
+    }));
+
   const relocationServices = loading ? [] : services
     .filter(service => service.service_type?.toLowerCase().includes('relocation'))
     .slice(0, 4)
@@ -272,40 +308,7 @@ const Explore: React.FC = () => {
     .map(transformProperty);
 
   const recentSaleListings = loading ? [] : properties
-    .filter(prop => prop.category === 'sale' && prop.property_type !== 'land' && prop.property_type !== 'commercial')
-    .slice(0, 4)
-    .map(transformProperty);
-
-  const recentCommercialListings = loading ? [] : properties
-    .filter(prop => prop.category === 'sale' && prop.property_type === 'commercial')
-    .slice(0, 4)
-    .map(transformProperty);
-
-  const recentLandListings = loading ? [] : properties
-    .filter(prop => prop.category === 'sale' && prop.property_type === 'land')
-    .slice(0, 4)
-    .map(transformProperty);
-
-  const recentShortletListings = loading ? [] : shortlets
-    .slice(0, 4)
-    .map(shortlet => ({
-      id: shortlet.id,
-      title: shortlet.title,
-      price: shortlet.daily_rate,
-      duration: '/ day',
-      rating: shortlet.rating || 4.5,
-      imageUrl: shortlet.images?.[0] || '/placeholder.svg',
-      location: shortlet.location,
-      badge: shortlet.featured ? 'Featured' : undefined,
-    }));
-
-  const recentShopListings = loading ? [] : properties
-    .filter(prop => prop.category === 'shop')
-    .slice(0, 4)
-    .map(transformProperty);
-
-  const recentEventCenterListings = loading ? [] : properties
-    .filter(prop => prop.category === 'event_center')
+    .filter(prop => prop.category === 'sale' && prop.property_type !== 'land')
     .slice(0, 4)
     .map(transformProperty);
 
@@ -343,7 +346,18 @@ const Explore: React.FC = () => {
 
   const handleFavoriteToggle = async (propertyId: string) => {
     try {
-      const isAdding = await PropertyService.toggleFavorite(propertyId);
+      // Determine listing type based on category
+      const allItems = [...properties, ...shortlets, ...services];
+      const item = allItems.find(p => p.id === propertyId);
+      
+      let listingType: 'property' | 'sale_property' | 'shortlet' | 'shop' | 'event_center' | 'service' = 'property';
+      if (item?.category === 'sale') listingType = 'sale_property';
+      else if (item?.category === 'shortlet') listingType = 'shortlet';
+      else if (item?.category === 'shop') listingType = 'shop';
+      else if (item?.category === 'event_center') listingType = 'event_center';
+      else if (item?.category === 'service') listingType = 'service';
+      
+      const isAdding = await PropertyService.toggleFavorite(propertyId, listingType);
       
       const newFavorites = new Set(favorites);
       if (isAdding) {
@@ -448,7 +462,7 @@ const Explore: React.FC = () => {
             
             {locationPermission === 'granted' && nearbyProperties.length > 0 && (
               <PropertySection
-                title={`Recent listings around you (${userLocation?.state}${userLocation?.lga ? ', ' + userLocation.lga : ''})`}
+                title={`Recent listings around you`}
                 properties={propertiesWithFavorites(nearbyProperties)}
                 onPropertyClick={handlePropertyClick}
                 onFavoriteToggle={handleFavoriteToggle}
@@ -456,7 +470,7 @@ const Explore: React.FC = () => {
             )}
             
             <PropertySection
-              title="Recent Home Listings"
+              title="Recent Houses for Rent"
               properties={propertiesWithFavorites(recentRentListings)}
               onPropertyClick={handlePropertyClick}
               onFavoriteToggle={handleFavoriteToggle}
@@ -471,7 +485,7 @@ const Explore: React.FC = () => {
             
             <PropertySection
               title="Houses for Sale"
-              properties={propertiesWithFavorites(propertiesForSale)}
+              properties={propertiesWithFavorites(recentSaleListings)}
               onPropertyClick={handlePropertyClick}
               onFavoriteToggle={handleFavoriteToggle}
             />
