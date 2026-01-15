@@ -134,7 +134,20 @@ export default function NewShortletListingForm() {
       const imagePromises = Array.from(files).map(file => {
         return new Promise<string>((resolve) => {
           const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
+          reader.onload = () => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const maxWidth = 800;
+              const scale = Math.min(1, maxWidth / img.width);
+              canvas.width = img.width * scale;
+              canvas.height = img.height * scale;
+              const ctx = canvas.getContext('2d');
+              ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+              resolve(canvas.toDataURL('image/jpeg', 0.6));
+            };
+            img.src = reader.result as string;
+          };
           reader.readAsDataURL(file);
         });
       });

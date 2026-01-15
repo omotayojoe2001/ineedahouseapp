@@ -61,7 +61,7 @@ export default function NewSaleListingForm() {
   const loadExistingListing = async () => {
     try {
       const { data, error } = await supabase
-        .from("properties")
+        .from("sale_properties")
         .select("*")
         .eq("id", editId)
         .single();
@@ -99,34 +99,30 @@ export default function NewSaleListingForm() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
     setUploading(true);
-    const uploadedUrls: string[] = [];
-
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const fileExt = file.name.split(".").pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `${fileName}`;
-
-        const { error: uploadError, data } = await supabase.storage
-          .from("property-images")
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from("property-images")
-          .getPublicUrl(filePath);
-
-        uploadedUrls.push(publicUrl);
-      }
-
-      setFormData((prev) => ({
-        ...prev,
-        images: [...prev.images, ...uploadedUrls],
-      }));
+      const imagePromises = Array.from(files).map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const maxWidth = 800;
+              const scale = Math.min(1, maxWidth / img.width);
+              canvas.width = img.width * scale;
+              canvas.height = img.height * scale;
+              const ctx = canvas.getContext('2d');
+              ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+              resolve(canvas.toDataURL('image/jpeg', 0.6));
+            };
+            img.src = reader.result as string;
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+      const base64Images = await Promise.all(imagePromises);
+      setFormData((prev) => ({ ...prev, images: [...prev.images, ...base64Images] }));
       toast.success("Images uploaded successfully");
     } catch (error: any) {
       toast.error("Failed to upload images");
@@ -153,7 +149,6 @@ export default function NewSaleListingForm() {
 
       const propertyData: any = {
         user_id: user.id,
-        listing_type: "sale",
         property_type: formData.property_type,
         property_sub_type: formData.property_sub_type,
         location: formData.location,
@@ -180,7 +175,7 @@ export default function NewSaleListingForm() {
 
       if (editId) {
         const { error } = await supabase
-          .from("properties")
+          .from("sale_properties")
           .update(propertyData)
           .eq("id", editId);
 
@@ -188,14 +183,14 @@ export default function NewSaleListingForm() {
         toast.success("Listing updated successfully");
       } else {
         const { error } = await supabase
-          .from("properties")
+          .from("sale_properties")
           .insert([propertyData]);
 
         if (error) throw error;
         toast.success("Listing created successfully");
       }
 
-      navigate("/dashboard");
+      navigate("/my-listings");
     } catch (error: any) {
       toast.error(error.message || "Failed to save listing");
       console.error(error);
@@ -359,9 +354,17 @@ export default function NewSaleListingForm() {
           <div className="space-y-6">
             <h1 className="text-3xl font-bold">Where is the property located?</h1>
             <EnhancedLocationInput
-              value={formData.location}
               onLocationChange={(locationData) => {
-                const fullAddress = `${locationData.detailedAddress || ""}, ${locationData.landmarks || ""}`.trim();
+                // Build location string from state, city, area names
+                const parts = [];
+                if (locationData.areaId) parts.push(locationData.areaId); // Will need to get name
+                if (locationData.cityId) parts.push(locationData.cityId); // Will need to get name
+                if (locationData.stateId) parts.push(locationData.stateId); // Will need to get name
+                
+                // For now, use the detailed address and landmarks
+                const addressParts = [locationData.detailedAddress, locationData.landmarks].filter(p => p && p.trim());
+                const fullAddress = addressParts.join(", ");
+                
                 setFormData({ ...formData, location: fullAddress, address: fullAddress });
               }}
             />

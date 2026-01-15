@@ -90,7 +90,8 @@ const EnhancedLocationInput: React.FC<EnhancedLocationInputProps> = ({
         landmarks
       });
     }
-  }, [selectedState, selectedCity, selectedArea, selectedStreet, detailedAddress, landmarks, onLocationChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedState, selectedCity, selectedArea, selectedStreet, detailedAddress, landmarks]);
 
   const loadStates = async () => {
     try {
@@ -137,8 +138,18 @@ const EnhancedLocationInput: React.FC<EnhancedLocationInputProps> = ({
       setSelectedCity(city.id);
       setNewCity('');
       setShowAddCity(false);
-    } catch (error) {
-      console.error('Error adding city:', error);
+    } catch (error: any) {
+      // If duplicate, find and select existing city
+      if (error?.code === '23505') {
+        const existing = cities.find(c => c.name.toLowerCase() === newCity.trim().toLowerCase());
+        if (existing) {
+          setSelectedCity(existing.id);
+          setNewCity('');
+          setShowAddCity(false);
+        }
+      } else {
+        console.error('Error adding city:', error);
+      }
     }
   };
 
@@ -151,8 +162,29 @@ const EnhancedLocationInput: React.FC<EnhancedLocationInputProps> = ({
       setSelectedArea(area.id);
       setNewArea('');
       setShowAddArea(false);
-    } catch (error) {
-      console.error('Error adding area:', error);
+    } catch (error: any) {
+      // If duplicate, find and select existing area
+      if (error?.code === '23505') {
+        const existing = areas.find(a => a.name.toLowerCase() === newArea.trim().toLowerCase());
+        if (existing) {
+          setSelectedArea(existing.id);
+          setNewArea('');
+          setShowAddArea(false);
+        } else {
+          // Reload areas to get the existing one
+          await loadAreas(selectedCity);
+          const reloaded = await LocationService.getAreasByCity(selectedCity);
+          const found = reloaded.find(a => a.name.toLowerCase() === newArea.trim().toLowerCase());
+          if (found) {
+            setAreas(reloaded);
+            setSelectedArea(found.id);
+            setNewArea('');
+            setShowAddArea(false);
+          }
+        }
+      } else {
+        console.error('Error adding area:', error);
+      }
     }
   };
 
@@ -165,8 +197,18 @@ const EnhancedLocationInput: React.FC<EnhancedLocationInputProps> = ({
       setSelectedStreet(street.id);
       setNewStreet('');
       setShowAddStreet(false);
-    } catch (error) {
-      console.error('Error adding street:', error);
+    } catch (error: any) {
+      // If duplicate, find and select existing street
+      if (error?.code === '23505') {
+        const existing = streets.find(s => s.name.toLowerCase() === newStreet.trim().toLowerCase());
+        if (existing) {
+          setSelectedStreet(existing.id);
+          setNewStreet('');
+          setShowAddStreet(false);
+        }
+      } else {
+        console.error('Error adding street:', error);
+      }
     }
   };
 

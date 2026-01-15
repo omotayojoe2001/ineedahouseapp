@@ -48,14 +48,14 @@ const Explore: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Make all queries in parallel for better performance
+        // Make all queries in parallel with limits for better performance
         const [propertiesRes, salePropertiesRes, shortletsRes, servicesRes, shopsRes, eventCentersRes] = await Promise.allSettled([
-          supabase.from('properties').select('*, property_images(image_url, is_primary)').order('created_at', { ascending: false }),
-          supabase.from('sale_properties').select('*').order('created_at', { ascending: false }),
-          supabase.from('shortlets').select('*').order('created_at', { ascending: false }),
-          supabase.from('services').select('*').order('created_at', { ascending: false }),
-          supabase.from('shops').select('*').order('created_at', { ascending: false }),
-          supabase.from('event_centers').select('*').order('created_at', { ascending: false })
+          supabase.from('properties').select('id, title, price, location, category, property_type, images, featured, created_at').order('created_at', { ascending: false }).limit(20),
+          supabase.from('sale_properties').select('id, title, sale_price, location, property_type, images, featured, created_at').order('created_at', { ascending: false }).limit(20),
+          supabase.from('shortlets').select('id, title, daily_rate, location, images, featured, created_at').order('created_at', { ascending: false }).limit(20),
+          supabase.from('services').select('id, title, pricing, location, service_type, images, created_at').order('created_at', { ascending: false }).limit(20),
+          supabase.from('shops').select('id, title, monthly_rent, location, images, created_at').order('created_at', { ascending: false }).limit(20),
+          supabase.from('event_centers').select('id, title, daily_rate, location, images, created_at').order('created_at', { ascending: false }).limit(20)
         ]);
 
         const allProperties: any[] = [];
@@ -470,78 +470,15 @@ const Explore: React.FC = () => {
             />
             
             <PropertySection
-              title="Recent Houses for Sale"
-              properties={propertiesWithFavorites(recentSaleListings)}
-              onPropertyClick={handlePropertyClick}
-              onFavoriteToggle={handleFavoriteToggle}
-            />
-            
-            <PropertySection
-              title="Recent Commercial Properties"
-              properties={propertiesWithFavorites(recentCommercialListings)}
-              onPropertyClick={handlePropertyClick}
-              onFavoriteToggle={handleFavoriteToggle}
-            />
-            
-            <PropertySection
-              title="Recent Land Listings"
-              properties={propertiesWithFavorites(recentLandListings)}
-              onPropertyClick={handlePropertyClick}
-              onFavoriteToggle={handleFavoriteToggle}
-            />
-            
-            <PropertySection
-              title="Recent Shop Listings"
-              properties={propertiesWithFavorites(recentShopListings)}
-              onPropertyClick={handlePropertyClick}
-              onFavoriteToggle={handleFavoriteToggle}
-            />
-            
-            <PropertySection
-              title="Recent Event Center Listings"
-              properties={propertiesWithFavorites(recentEventCenterListings)}
-              onPropertyClick={handlePropertyClick}
-              onFavoriteToggle={handleFavoriteToggle}
-            />
-            
-            <PropertySection
-              title="Popular homes in Lagos"
-              properties={propertiesWithFavorites(popularLagosProperties)}
-              onPropertyClick={handlePropertyClick}
-              onFavoriteToggle={handleFavoriteToggle}
-            />
-            
-            <PropertySection
-              title="Available next month in Abuja"
-              properties={propertiesWithFavorites(nextMonthAbuja)}
-              onPropertyClick={handlePropertyClick}
-              onFavoriteToggle={handleFavoriteToggle}
-            />
-
-            <PropertySection
-              title="Houses for sale"
+              title="Houses for Sale"
               properties={propertiesWithFavorites(propertiesForSale)}
               onPropertyClick={handlePropertyClick}
               onFavoriteToggle={handleFavoriteToggle}
             />
-
+            
             <PropertySection
-              title="Land for sale"
+              title="Land for Sale"
               properties={propertiesWithFavorites(landForSale)}
-              onPropertyClick={handlePropertyClick}
-              onFavoriteToggle={handleFavoriteToggle}
-            />
-
-            <PropertySection
-              title="Property relocation services"
-              properties={propertiesWithFavorites(relocationServices)}
-              onPropertyClick={handlePropertyClick}
-              onFavoriteToggle={handleFavoriteToggle}
-            />
-
-            <PropertySection
-              title="Other services"
-              properties={propertiesWithFavorites(otherServices)}
               onPropertyClick={handlePropertyClick}
               onFavoriteToggle={handleFavoriteToggle}
             />

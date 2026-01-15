@@ -21,11 +21,12 @@ const SearchResultsPage = () => {
       setNoResults(false);
 
       try {
-        // Start with ALL active properties
+        // Start with limited active properties
         let { data, error } = await supabase
           .from('properties')
-          .select('*, property_images(image_url, is_primary)')
-          .eq('status', 'active');
+          .select('id, title, price, location, category, images, created_at')
+          .eq('status', 'active')
+          .limit(100);
 
         if (error) throw error;
 
@@ -136,9 +137,7 @@ const SearchResultsPage = () => {
             {properties.map((property) => (
               <div key={property.id} className="bg-white rounded-lg border hover:shadow-lg transition-shadow">
                 <img
-                  src={property.property_images?.find((img: any) => img.is_primary)?.image_url || 
-                       property.property_images?.[0]?.image_url || 
-                       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400'}
+                  src={property.images?.[0] || 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400'}
                   alt={property.title}
                   className="w-full h-48 object-cover rounded-t-lg"
                 />
